@@ -28,6 +28,14 @@ To install Obsidian, download it from the [official site](https://obsidian.md/) 
 
 ### Manual installation
 
+- Download `main.js`, `manifest.json` and `styles.css` from the [releases page](https://github.com/elpamplina/mastodon-threading/releases).
+- Create (if it doesn't exist) a folder `<path-to-obsidian-vault>/.obsidian/plugins/mastodon-threading/` and copy in it the files.
+- Run Obsidian, open your vault, open Settings, and enable Mastodon Threading on the Community Plugins tab.
+
+You can also install it with the [BRAT plugin helper](https://github.com/TfTHacker/obsidian42-brat). Follow its instructions to get the plugin and enable it.
+
+## Build 
+
 To build the plugin, you need [Node.js](https://nodejs.org) with [NPM](https://www.npmjs.com/) or similar manager installed in your computer. Clone the source, install all dependencies and build the plugin:
 ```sh
 $ git clone https://github.com/elpamplina/mastodon-threading.git
@@ -35,9 +43,6 @@ $ cd mastodon-threading
 $ npm install
 $ npm run build
 ```
-Now create (if it doesn't exist) a folder `<path-to-obsidian-vault>/.obsidian/plugins/mastodon-threading/` and copy in it the files `main.js`, `styles.css` and `manifest.json` to it.
-
-Run Obsidian, open your vault, open Settings, and enable Mastodon Threading on the Community Plugins tab.
 
 ## Settings
 
