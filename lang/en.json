@@ -1,0 +1,60 @@
+{
+	"settings": {
+		"server": "Mastodon server",
+		"server_desc": "i.e. mastodon.social",
+		"server_hint": "Domain name",
+		"connect_status": "Connected to Mastodon at {{server}}",
+		"disconnect": "Disconnect",
+		"logged_out": "Logged out from server",
+		"connect_to": "Connect to Mastodon",
+		"connect": "Connect",
+		"error": "Error connecting to server!",
+		"max_post": "Post size",
+		"max_post_desc": "{{server}} allows posts up to {{max}} characters.",
+		"visibility_first": "First post visibility",
+		"visibility_first_desc": "First post in thread (or single post).",
+		"visibility_rest": "Next posts visibility",
+		"visibility_rest_desc": "2nd and rest posts in thread.",
+		"visibility_warning": "Posting an entire thread in public is generally considered disrespectful. Please check that this is allowed in the server rules.",
+		"post_counter": "Post counter",
+		"post_counter_desc": "Insert counter (e.g. 1/10) at the bottom of each post in the thread.",
+		"visibility": {
+			"public": "Public",
+			"public_not_recommended": "Public (not recommended)",
+			"unlisted": "Quiet public (unlisted and not searchable)",
+			"private": "Private (only followers)"
+		}
+	},
+	"modal": {
+		"send_thread_count": "Send thread to Mastodon with {{count}} posts",
+		"visibility_single": "Visibility",
+		"visibility_first": "First post visibility",
+		"visibility_rest": "Visibility of other posts",
+		"submit": "Send",
+		"no_description": "WARNING: There're images without description. Send anyway?"
+	},
+	"command": {
+		"single_post": "Send single post to Mastodon",
+		"send_thread": "Send thread to Mastodon",
+		"insert_separator": "Insert thread separator",
+		"create_fragments": "Insert thread separators automatically",
+		"remove_separators": "Remove all thread separators"
+	},
+	"ok": {
+		"message_posted": "Message posted",
+		"thread_posted": "Thread posted"
+	},
+	"error": {
+		"session_lost": "The Mastodon session is lost!",
+		"not_logged": "You're not connected to Mastodon. Please, check the plugin settings.",
+		"not_posted": "ERROR: The message wasn't posted!",
+		"no_selection": "No text selected!",
+		"no_text": "No text to send!",
+		"size_exceeded": "NOT SENT: More than {{max}} characters in one post.",
+		"file_size_exceeded": "NOT SENT: Attachment size exceeded.",
+		"alt_exceeded": "NOT SENT: More than {{max}} characters in description.",
+		"attachment_exceeded": "NOT SENT: More than {{max}} images in one post.",
+		"void_fragment": "NOT SENT: Can't send empty fragments!",
+		"file_not_found": "ERROR: Attachment file not found."
+	}
+}

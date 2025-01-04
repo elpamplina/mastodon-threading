@@ -1,0 +1,62 @@
+{
+	"settings": {
+		"server": "Servidor de Mastodon",
+		"server_desc": "p.ej. mastodon.social",
+		"server_hint": "Nombre de dominio",
+		"connect_status": "Conectado a Mastodon en {{server}}",
+		"disconnect": "Desconectar",
+		"logged_out": "Se ha cerrado la sesión con el servidor",
+		"connect_to": "Conectar a Mastodon",
+		"connect": "Conectar",
+		"error": "¡Error conectando con el servidor!",
+		"connecting": "Intentando conectar a {{server}}...",
+		"cancel": "Cancelar",
+		"max_post": "Tamaño de los mensajes",
+		"max_post_desc": "{{server}} admite hasta {{max}} caracteres por mensaje.",
+		"visibility_first": "Visibilidad del primer mensaje",
+		"visibility_first_desc": "Primer mensaje del hilo (o mensaje único).",
+		"visibility_rest": "Visibilidad del resto de mensajes",
+		"visibility_rest_desc": "Segundo mensaje y resto del hilo.",
+		"visibility_warning": "Enviar un hilo completo en público se suele considerar poco respetuoso. Comprueba que esto está permitido en las reglas del servidor.",
+		"post_counter": "Contador de mensajes",
+		"post_counter_desc": "Insertar contador (p.ej. 1/10) al pie de cada mensaje del hilo.",
+		"visibility": {
+			"public": "Pública",
+			"public_not_recommended": "Pública (no recomendada)",
+			"unlisted": "Pública silenciosa (no listado ni en búsquedas)",
+			"private": "Privado (solo para tus seguidores)"
+		}
+	},
+	"modal": {
+		"send_thread_count": "Enviar hilo a Mastodon con {{count}} posts",
+		"visibility_single": "Visibilidad",
+		"visibility_first": "Visibilidad del primer post",
+		"visibility_rest": "Visibilidad del resto",
+		"submit": "Enviar",
+		"no_description": "AVISO: Hay imágenes sin descripción. ¿Enviar de todos modos?"
+	},
+	"command": {
+		"single_post": "Enviar un post a Mastodon",
+		"send_thread": "Enviar hilo a Mastodon",
+		"insert_separator": "Insertar separador de hilo",
+		"create_fragments": "Insertar separadores de hilo automáticamente",
+		"remove_separators": "Quitar todos los separadores de hilo"
+	},
+	"ok": {
+		"message_posted": "Mensaje enviado",
+		"thread_posted": "Hilo enviado"
+	},
+	"error": {
+		"session_lost": "¡Se ha perdido la sesión con Mastodon!",
+		"not_logged": "No estás conectado a Mastodon. Por favor, revisa los ajustes del complemento.",
+		"not_posted": "ERROR: ¡El mensaje no se ha enviado!",
+		"no_selection": "¡No hay texto seleccionado!",
+		"no_text": "¡No hay texto para enviar!",
+		"size_exceeded": "NO ENVIADO: Se superan los {{max}} caracteres.",
+		"file_size_exceeded": "NO ENVIADO: Se supera el tamaño de archivo adjunto.",
+		"alt_exceeded": "NO ENVIADO: Se superan los {{max}} caracteres en la descripción.",
+		"attachment_exceeded": "NO ENVIADO: Se superan las {{max}} imágenes en un post.",
+		"void_fragment": "NO ENVIADO: Hay fragmentos vacíos.",
+		"file_not_found": "ERROR: Archivo adjunto no encontrado."
+	}
+}

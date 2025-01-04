@@ -1,116 +1,478 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import {addIcon, App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile} from 'obsidian';
+import {createApp, getAuthToken, getAuthURL, getClient} from "./auth";
+import {mastodon} from "masto";
+import * as lang_en from 'lang/en.json';
+import * as lang_es from 'lang/es.json';
+import {
+	pattern_image,
+	pattern_quote,
+	pattern_server,
+	pattern_url,
+	SEPARATOR,
+	separatorField,
+	separatorPostProcessor
+} from "./utils";
+import {lookup} from "mime-types";
+import {decryptText, encryptText, generateKey} from "./encrypt";
 
-// Remember to rename these classes and interfaces!
+type StatusVisibility = mastodon.v1.StatusVisibility;
 
-interface MyPluginSettings {
-	mySetting: string;
+// @ts-ignore
+const t = i18next.getFixedT(null, 'plugin-mastodon-threading', null);
+
+interface MastodonThreadingSettings {
+	key: string,
+	server: string,
+	clientId: string,
+	clientSecret: string,
+	authToken: string,
+	maxPost: number,
+	serverMaxPost: number,
+	serverMaxImage: number,
+	serverMaxAttachments: number,
+	serverMaxDescription: number,
+	serverMimeTypes: string[],
+	visibilityFirst: mastodon.v1.StatusVisibility,
+	visibilityRest: mastodon.v1.StatusVisibility,
+	postCounter: boolean,
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: MastodonThreadingSettings = {
+	key: '',
+	server: '',
+	clientId: '',
+	clientSecret: '',
+	authToken: '',
+	maxPost: 500,
+	serverMaxPost: 500,
+	serverMaxImage: 10485760,
+	serverMaxAttachments: 4,
+	serverMaxDescription: 1500,
+	serverMimeTypes: [
+		"image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/heic",
+        "image/heif",
+        "image/webp",
+	],
+	visibilityFirst: 'public',
+	visibilityRest: 'unlisted',
+	postCounter: false,
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class MastodonThreading extends Plugin {
+	settings: MastodonThreadingSettings;
 
 	async onload() {
+		// @ts-ignore
+		i18next.addResourceBundle('en', 'plugin-mastodon-threading', lang_en);
+		// @ts-ignore
+		i18next.addResourceBundle('es', 'plugin-mastodon-threading', lang_es);
+
+		addIcon('mastodon', '<defs id="defs1" /><path style="display:inline;opacity:1;fill:none;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="M 80.194896,7.041879 C 61.252354,7.004439 40.245295,6.974149 19.993422,6.993209 12.868784,6.999909 7.088956,12.786413 7.085298,19.908809 7.073308,43.258638 7.065028,75.760167 7.065028,75.760167 l 73.162106,0.0275 A 12.80697,12.802919 0 0 0 93.038918,62.984751 V 19.908797 c 0,-7.09135 -5.750482,-12.852867 -12.844057,-12.86693 z" id="path2" /><path style="display:inline;opacity:1;fill:none;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="m 7.065023,75.787671 v 8.597485 a 8.6001932,8.5974803 0 0 0 8.600193,8.597481 h 34.400786" id="path3" /><path style="display:inline;opacity:1;fill:none;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="M 71.467494,58.597486 V 32.805037 c 0,-12.896225 -21.478791,-12.765944 -21.467494,0 V 50 l 4e-6,-17.194965 c 0.01118,-12.765944 -21.467493,-12.896225 -21.467495,0 v 25.792451" id="path4-3" />');
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		// Editor: Send single post
+		this.registerEvent(
+			this.app.workspace.on('editor-menu', (menu, editor, view) => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('command.single_post'))
+						.setIcon('mastodon')
+						.onClick(async () => {
+							this.single_post(editor);
+						});
+				});
+			})
+		);
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
+		// Command: Send single post
 		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
+			id: 'send-single-post',
+			name: t('command.single_post'),
+			icon: 'mastodon',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
+				this.single_post(editor);
 			}
 		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
+
+		// Command: Send thread
 		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+			id: 'send-thread',
+			name: t('command.send_thread'),
+			icon: 'mastodon',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				this.thread_post(editor);
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
+		// Command: Create fragments
+		this.addCommand({
+			id: 'create-fragments',
+			name: t('command.create_fragments'),
+			icon: 'chart-gantt',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				this.create_fragments(editor);
+			}
 		});
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		// Ribbon: Send thread
+		this.addRibbonIcon('mastodon', t('command.send_thread'), () => {
+			const editor = this.app.workspace.activeEditor?.editor;
+			if (editor) {
+				this.thread_post(editor);
+			}
+		});
+
+		// Command: Insert separator
+		this.addCommand({
+			id: 'insert-separator',
+			name: t('command.insert_separator'),
+			icon: 'minus',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				this.insert_separator(editor);
+			}
+		});
+
+		// Command: Remove separators
+		this.addCommand({
+			id: 'remove-separators',
+			name: t('command.remove_separators'),
+			icon: 'equal-not',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				this.remove_separators(editor);
+			}
+		});
+
+		// Editor: Insert separator
+		this.registerEvent(
+			this.app.workspace.on('editor-menu', (menu, editor, view) => {
+				menu.addItem((item) => {
+					item
+						.setTitle(t('command.insert_separator'))
+						.setIcon('minus')
+						.onClick(async () => {
+							this.insert_separator(editor);
+						});
+				});
+			})
+		);
+
+
+		this.addSettingTab(new MastodonThreadingSettingTab(this.app, this));
+
+		this.registerObsidianProtocolHandler('mastodon-threading',
+			async (data) => {
+				if (data.action === 'mastodon-threading') {
+					this.settings.authToken = await getAuthToken(
+						this.settings.server,
+						this.settings.clientId,
+						this.settings.clientSecret,
+						data.code);
+					await this.saveSettings();
+				}
+			});
+
+		this.registerEditorExtension(separatorField(this));
+		this.registerMarkdownPostProcessor(separatorPostProcessor);
 	}
 
-	onunload() {
+	insert_separator(editor: Editor) {
+		editor.replaceRange(
+			editor.getCursor().ch === 0 ? SEPARATOR : `\n${SEPARATOR}`,
+			editor.getCursor()
+		);
+	}
 
+	single_post(editor: Editor) {
+		let message = '';
+		if (editor.getSelection()) {
+			// If some fragments selected, get only the last one
+			let chunks = editor.getSelection().split(SEPARATOR);
+			message = chunks[chunks.length - 1];
+		}
+		else {
+			new Notice(t('error.no_selection'));
+		}
+		if (message) {
+			new SendSinglePostModal(this.app, this, (visibility) => {
+				this.getClient().v1.statuses.create({status: message, visibility: visibility})
+					.then(status => {
+						new Notice(t('ok.message_posted'));
+					})
+					.catch(err => {
+						console.error(err);
+						new Notice(t('error.not_posted'));
+					});
+			}).open();
+		}
+	}
+
+	async thread_post(editor: Editor) {
+		try {
+			if (editor.getValue()) {
+				type postMetadata = {
+					text: string,
+					images: {
+						file: TFile,
+						alt: string
+					}[]
+				}
+				let chunks = editor.getValue().split(SEPARATOR);
+				let posts: postMetadata[] = [];
+				let count = 0;
+				let descriptions = true;
+				for (let c of chunks) {
+					if (c.trim().length === 0) {
+						new Notice(t('error.void_fragment'));
+						return;
+					}
+					let post: postMetadata = {
+						text: c,
+						images: []
+					}
+					// Get images metadata
+					for (let m of post.text.matchAll(pattern_image)) {
+						if (this.settings.serverMimeTypes.includes(lookup(m[2].toLowerCase()) || '-')) {
+							let file = this.app.vault.getFileByPath(m[1]);
+							if (file === null) {
+								new Notice(t('error.file_not_found'));
+								return;
+							}
+							if (file.stat.size > this.settings.serverMaxImage) {
+								new Notice(t('error.file_size_exceeded'));
+								return;
+							}
+							let desc: string = '';
+							if (m[3]) {
+								desc = m[3].replace(/\n> ?/g, '\n')
+									.replace(/^> ?/, '').trim();
+								if (desc.length > this.settings.serverMaxDescription) {
+									new Notice(t('error.alt_exceeded', {max: this.settings.serverMaxDescription}));
+									return;
+								}
+							}
+							if (!desc) {
+								descriptions = false;
+							}
+							post.images.push({
+								file: file,
+								alt: desc
+							});
+						}
+					}
+					if (post.images.length > this.settings.serverMaxAttachments) {
+						new Notice(t('error.attachment_exceeded', {max: this.settings.serverMaxAttachments}));
+						return;
+					}
+					// Remove images from main text
+					post.text = post.text.replace(pattern_image, ' ')
+					// Simplify links
+						.replace(pattern_url, '$1')
+					// Remove quote blocks
+						.replace(pattern_quote, '')
+					// Finally, strip spaces
+						.trim();
+					// Add counter
+					if (this.settings.postCounter) {
+						post.text += `\n[${++count}/${chunks.length}]`;
+					}
+					if (post.text.length > this.settings.maxPost) {
+						new Notice(t('error.size_exceeded', {max: this.settings.maxPost}));
+						return;
+					}
+					posts.push(post);
+				}
+				new SendThreadModal(this.app, this, posts.length, async (visibility_first, visibility_rest) => {
+					if (descriptions || confirm(t('modal.no_description'))) {
+						try {
+							let first = true;
+							let id_link: string | null = null;
+							for (let p of posts) {
+								let media: string[] = [];
+								for (let img of p.images) {
+									let m = await this.getClient().v2.media.create({
+										file: new Blob([await this.app.vault.readBinary(img.file)]),
+										description: img.alt
+									});
+									media.push(m.id);
+								}
+								let status: mastodon.v1.Status = await this.getClient().v1.statuses.create({
+									status: p.text,
+									visibility: (first ? visibility_first : visibility_rest),
+									inReplyToId: id_link,
+									mediaIds: media,
+								});
+								id_link = status.id;
+								first = false;
+							}
+							new Notice(t('ok.thread_posted'));
+						} catch (err) {
+							console.error(err);
+							new Notice(t('error.not_posted'));
+						}
+					}
+				}).open();
+			} else {
+				new Notice(t('error.no_text'));
+			}
+		} catch (err) {
+			console.error(err);
+			new Notice(t('error.not_posted'));
+		}
+	}
+
+	create_fragments(editor: Editor) {
+		// Remove old separators
+		this.remove_separators(editor);
+		// Insert new separators
+		let count = 0;
+		for (let i = 0; i < editor.lineCount(); i++) {
+			let text = editor.getLine(i);
+			// Ignore quotes
+			if (!text.startsWith('>')) {
+				// Ignore images and shorten links
+				text = text.replace(pattern_image, ' ')
+					.replace(pattern_url, '$1');
+				count += text.length + 1;
+				if (count > this.settings.maxPost) {
+					editor.replaceRange(SEPARATOR, {line: i, ch: 0});
+					count = text.length + 1;
+				}
+			}
+		}
+	}
+
+	remove_separators(editor: Editor) {
+		for (let i = 0; i < editor.lineCount(); i++) {
+			if (editor.getLine(i).startsWith(SEPARATOR)) {
+				editor.replaceRange('', {line: i, ch: 0}, {line: i, ch: 1})
+			}
+		}
 	}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		if (this.settings.clientId) {
+			const secrets: {authToken: string, clientSecret: string} =
+				JSON.parse(window.localStorage.getItem(
+					'mastodon-threading-client') || '{"authToken": "", "clientSecret": ""}');
+			if (this.settings.key && typeof secrets.authToken === 'string' && typeof secrets.clientSecret === 'string') {
+				secrets.authToken = await decryptText(this.settings.key, secrets.authToken);
+				secrets.clientSecret = await decryptText(this.settings.key, secrets.clientSecret);
+			}
+			else {
+				secrets.authToken = '';
+				secrets.clientSecret = '';
+			}
+			this.settings = {...this.settings, ...secrets};
+		}
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		this.settings.key = generateKey();
+		// Store encrypted secrets in the local storage
+		window.localStorage.setItem('mastodon-threading-client', JSON.stringify({
+			authToken: await encryptText(this.settings.key, this.settings.authToken),
+			clientSecret: await encryptText(this.settings.key, this.settings.clientSecret)
+		}));
+		// Store key and other settings in filesystem
+		await this.saveData({...this.settings, clientSecret: '', authToken: ''});
+	}
+
+	getClient(): mastodon.rest.Client {
+		if (!this.settings.server || !this.settings.authToken) {
+			new Notice(t('error.not_logged'));
+			throw Error('Missing auth credentials.');
+		}
+		else {
+			try {
+				return getClient(this.settings.server, this.settings.authToken);
+			} catch (err) {
+				new Notice(t('error.session_lost'))
+				console.error(err);
+				throw err;
+			}
+		}
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+class SendSinglePostModal extends Modal {
+  constructor(app: App, plugin: MastodonThreading, onSubmit: (visibility: StatusVisibility) => void) {
+    super(app);
+	this.setTitle(t('command.single_post'));
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
+	let visibility = plugin.settings.visibilityFirst;
+	new Setting(this.contentEl)
+		.setName(t('modal.visibility_single'))
+		.addDropdown(dropdown => dropdown
+			.addOption('public', t('settings.visibility.public'))
+			.addOption('unlisted', t('settings.visibility.unlisted'))
+			.addOption('private', t('settings.visibility.private'))
+			.setValue(visibility)
+			.onChange(async value => {
+				visibility = value as StatusVisibility;
+			})
+		);
+    new Setting(this.contentEl)
+      .addButton((btn) =>
+        btn
+          .setButtonText(t('modal.submit'))
+          .setCta()
+          .onClick(() => {
+            this.close();
+            onSubmit(visibility);
+          }));
+  }
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class SendThreadModal extends Modal {
+  constructor(app: App, plugin: MastodonThreading, count: number, onSubmit: (visibility_first: StatusVisibility, visibility_rest: StatusVisibility) => void) {
+    super(app);
+	this.setTitle(t('modal.send_thread_count', {count: count}));
 
-	constructor(app: App, plugin: MyPlugin) {
+	let visibility_first = plugin.settings.visibilityFirst;
+	new Setting(this.contentEl)
+		.setName(t('modal.visibility_first'))
+		.addDropdown(dropdown => dropdown
+			.addOption('public', t('settings.visibility.public'))
+			.addOption('unlisted', t('settings.visibility.unlisted'))
+			.addOption('private', t('settings.visibility.private'))
+			.setValue(visibility_first)
+			.onChange(async value => {
+				visibility_first = value as StatusVisibility;
+			})
+		);
+	let visibility_rest = plugin.settings.visibilityRest;
+	new Setting(this.contentEl)
+		.setName(t('modal.visibility_rest'))
+		.addDropdown(dropdown => dropdown
+			.addOption('public', t('settings.visibility.public_not_recommended'))
+			.addOption('unlisted', t('settings.visibility.unlisted'))
+			.addOption('private', t('settings.visibility.private'))
+			.setValue(visibility_rest)
+			.onChange(async value => {
+				visibility_rest = value as StatusVisibility;
+			})
+		);
+    new Setting(this.contentEl)
+      .addButton((btn) =>
+        btn
+          .setButtonText(t('modal.submit'))
+          .setCta()
+          .onClick(() => {
+            this.close();
+            onSubmit(visibility_first, visibility_rest);
+          }));
+  }
+}
+
+class MastodonThreadingSettingTab extends PluginSettingTab {
+	plugin: MastodonThreading;
+	displayInterval?: unknown = null;
+
+	constructor(app: App, plugin: MastodonThreading) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -121,14 +483,167 @@ class SampleSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
+			.setName(t('settings.server'))
+			.setDesc(t('settings.server_desc'))
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+				.setPlaceholder(t('settings.server_hint'))
+				.setValue(this.plugin.settings.server)
+				.setDisabled(this.plugin.settings.authToken !== '')
 				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
+					this.plugin.settings.server = value.replace(pattern_server, '$2')
 					await this.plugin.saveSettings();
 				}));
+		if (this.plugin.settings.authToken) {
+			clearInterval(this.displayInterval as number);
+			this.displayInterval = null;
+			new Setting(containerEl)
+				.setName(t('settings.connect_status', {server: this.plugin.settings.server}))
+				.addButton((component) => {
+					component.setButtonText(t('settings.disconnect'))
+					component.onClick(async () => {
+						this.plugin.settings.authToken = '';
+						this.plugin.settings.clientId = '';
+						this.plugin.settings.clientSecret = '';
+						await this.plugin.saveSettings()
+						new Notice(t('settings.logged_out'))
+						this.display()
+					})
+				})
+		} else {
+			if (this.displayInterval === null) {
+				new Setting(containerEl)
+					.setName(t('settings.connect_to'))
+					.addButton((component) => {
+						component.setButtonText(t('settings.connect'))
+						component.onClick(async () => {
+							if (!this.plugin.settings.clientSecret) {
+								try {
+									let resp = await createApp(this.plugin.settings.server)
+									if (resp !== null) {
+										this.plugin.settings.clientId = resp.clientId;
+										this.plugin.settings.clientSecret = resp.clientSecret;
+										await this.plugin.saveSettings();
+										// Async get max characters allowed
+										fetch(`https://${this.plugin.settings.server}/api/v2/instance`)
+											.then(resp => {
+												if (resp.status == 200) {
+													return resp.json();
+												}
+											})
+											.then(async data => {
+												this.plugin.settings.serverMaxPost = data.configuration.statuses.max_characters;
+												this.plugin.settings.maxPost = this.plugin.settings.serverMaxPost;
+												this.plugin.settings.serverMaxDescription = data.configuration.media_attachments.description_limit;
+												this.plugin.settings.serverMaxImage = data.configuration.media_attachments.image_size_limit;
+												this.plugin.settings.serverMaxAttachments = data.configuration.statuses.max_media_attachments;
+												this.plugin.settings.serverMimeTypes =
+													data.configuration.media_attachments.supported_mime_types.filter((m: string) => m.startsWith('image/'));
+												await this.plugin.saveSettings();
+												this.display();
+											})
+											.catch(err => console.error(err));
+									} else {
+										new Notice(t('settings.error'));
+										return;
+									}
+								} catch (err) {
+									console.error(err);
+									new Notice(t('settings.error'));
+									return;
+								}
+							}
+							let url = await getAuthURL(
+								this.plugin.settings.server, this.plugin.settings.clientId);
+							if (url !== null) {
+								window.location.href = url;
+								this.displayInterval = setInterval(() => {
+									this.display()
+								}, 1000);
+							} else {
+								new Notice(t('settings.error'));
+								return;
+							}
+						})
+					})
+			}
+			else {
+				new Setting(containerEl)
+					.setName(t('settings.connecting', {server: this.plugin.settings.server}))
+					.addButton((component) => {
+						component.setButtonText(t('settings.cancel'))
+						component.onClick(async () => {
+							clearInterval(this.displayInterval as number);
+							this.displayInterval = null;
+							this.display();
+						})
+					});
+			}
+		}
+		let desc_max_post = new DocumentFragment();
+		let descspan = desc_max_post.createSpan();
+		descspan.textContent = t('settings.max_post_desc', {
+					server: this.plugin.settings.server,
+					max: this.plugin.settings.serverMaxPost
+				});
+		if (this.plugin.settings.maxPost > this.plugin.settings.serverMaxPost) {
+			descspan.addClass('warning');
+		}
+		new Setting(containerEl)
+			.setName(t('settings.max_post'))
+			.setDesc(this.plugin.settings.authToken? desc_max_post: '')
+			.addText(text => text
+				.setValue(this.plugin.settings.maxPost.toString())
+				.onChange(async (value) => {
+					this.plugin.settings.maxPost = parseInt(value) || 500;
+					await this.plugin.saveSettings();
+					if (this.plugin.settings.maxPost > this.plugin.settings.serverMaxPost) {
+						this.plugin.settings.maxPost = this.plugin.settings.serverMaxPost;
+						this.display();
+					}
+				}));
+		new Setting(containerEl)
+			.setName(t('settings.visibility_first'))
+			.setDesc(t('settings.visibility_first_desc'))
+			.addDropdown(dropdown => dropdown
+				.addOption('public', t('settings.visibility.public'))
+				.addOption('unlisted', t('settings.visibility.unlisted'))
+				.addOption('private', t('settings.visibility.private'))
+				.setValue(this.plugin.settings.visibilityFirst)
+				.onChange(async value => {
+					this.plugin.settings.visibilityFirst = value as StatusVisibility;
+					await this.plugin.saveSettings();
+				})
+			);
+		let desc_visibility = t('settings.visibility_rest_desc');
+		if (this.plugin.settings.visibilityRest === 'public') {
+			desc_visibility = new DocumentFragment();
+			let desctext = desc_visibility.createSpan();
+			desctext.textContent = t('settings.visibility_warning');
+			desctext.addClass('warning');
+		}
+		new Setting(containerEl)
+			.setName(t('settings.visibility_rest'))
+			.setDesc(desc_visibility)
+			.addDropdown(dropdown => dropdown
+				.addOption('public', t('settings.visibility.public_not_recommended'))
+				.addOption('unlisted', t('settings.visibility.unlisted'))
+				.addOption('private', t('settings.visibility.private'))
+				.setValue(this.plugin.settings.visibilityRest)
+				.onChange(async value => {
+					this.plugin.settings.visibilityRest = value as StatusVisibility;
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+		new Setting(containerEl)
+			.setName(t('settings.post_counter'))
+			.setDesc(t('settings.post_counter_desc'))
+			.addToggle(tg => tg
+				.setValue(this.plugin.settings.postCounter)
+				.onChange(async value => {
+					this.plugin.settings.postCounter = value;
+					await this.plugin.saveSettings();
+				})
+			);
 	}
 }

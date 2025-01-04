@@ -1,8 +1,25 @@
-/*
+.separator {
+	width: 100%;
+	text-align: center;
+	border-bottom: 1px solid #ccc;
+	overflow: inherit;
+	margin: 0 0 30px;
+	font-size: 16px;
+	color: #222222;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.separator span {
+	background: #ccc;
+	padding: 0 5px 0 5px;
+	position: relative;
+	top: 10px;
+	font-weight: bold;
+}
 
-If your plugin does not need CSS, delete this file.
+.separator.warning span {
+	background: red;
+}
 
-*/
+span.warning {
+	color: red;
+}
