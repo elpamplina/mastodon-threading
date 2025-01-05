@@ -12,7 +12,7 @@ import {
 	separatorField,
 	separatorPostProcessor
 } from "./utils";
-import {lookup} from "mime-types";
+import mime from "mime/lite";
 import {decryptText, encryptText, generateKey} from "./encrypt";
 
 type StatusVisibility = mastodon.v1.StatusVisibility;
@@ -234,7 +234,8 @@ export default class MastodonThreading extends Plugin {
 					}
 					// Get images metadata
 					for (let m of post.text.matchAll(pattern_image)) {
-						if (this.settings.serverMimeTypes.includes(lookup(m[2].toLowerCase()) || '-')) {
+						console.log(mime.getType(m[2].toLowerCase())|| '-') //TODO quitar
+						if (this.settings.serverMimeTypes.includes(mime.getType(m[2].toLowerCase()) || '-')) {
 							let file = this.app.vault.getFileByPath(m[1]);
 							if (file === null) {
 								new Notice(t('error.file_not_found'));
