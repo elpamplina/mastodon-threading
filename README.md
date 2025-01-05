@@ -112,6 +112,14 @@ In Obsidian's view mode, separators appear as simple horizontal lines with no co
 
 When the plugin is disabled, or when copying text somewhere outside the vault, separators are displayed with the typographical paragraph symbol (§).
 
+### Quotes and image descriptions
+
+The plugin uses quote blocks (starting with the Markdown symbol ">") to add descriptions to images. Just add a quote after an image, and it will be sent as description.
+
+![Screen capture with an image with description](img/images.png)
+
+Quote blocks that are not directly behind an image will be ignored and will not be sent as part of the thread. Feel free to use them as a place to keep comments or notes. 
+
 ## Questions, suggestions or bugs
 
 You are greatly welcome to ask questions, post any suggestions, or report any bugs! You can do it directly here in Github, or by email at <elpamplinadecai@gmail.com>, or in Mastodon at @ElPamplina@masto.es

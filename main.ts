@@ -234,7 +234,6 @@ export default class MastodonThreading extends Plugin {
 					}
 					// Get images metadata
 					for (let m of post.text.matchAll(pattern_image)) {
-						console.log(mime.getType(m[2].toLowerCase())|| '-') //TODO quitar
 						if (this.settings.serverMimeTypes.includes(mime.getType(m[2].toLowerCase()) || '-')) {
 							let file = this.app.vault.getFileByPath(m[1]);
 							if (file === null) {
