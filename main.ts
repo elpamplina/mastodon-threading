@@ -21,7 +21,6 @@ type StatusVisibility = mastodon.v1.StatusVisibility;
 const t = i18next.getFixedT(null, 'plugin-mastodon-threading', null);
 
 interface MastodonThreadingSettings {
-	key: string,
 	server: string,
 	clientId: string,
 	clientSecret: string,
@@ -38,7 +37,6 @@ interface MastodonThreadingSettings {
 }
 
 const DEFAULT_SETTINGS: MastodonThreadingSettings = {
-	key: '',
 	server: '',
 	clientId: '',
 	clientSecret: '',
@@ -245,8 +243,8 @@ export default class MastodonThreading extends Plugin {
 								return;
 							}
 							let desc: string = '';
-							if (m[3]) {
-								desc = m[3].replace(/\n> ?/g, '\n')
+							if (m[4]) {
+								desc = m[4].replace(/\n> ?/g, '\n')
 									.replace(/^> ?/, '').trim();
 								if (desc.length > this.settings.serverMaxDescription) {
 									new Notice(t('error.alt_exceeded', {max: this.settings.serverMaxDescription}));
@@ -353,32 +351,28 @@ export default class MastodonThreading extends Plugin {
 	}
 
 	async loadSettings() {
+		const key = await generateKey(this.app.vault.getName())
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		if (this.settings.clientId) {
-			const secrets: {authToken: string, clientSecret: string} =
-				JSON.parse(window.localStorage.getItem(
-					'mastodon-threading-client') || '{"authToken": "", "clientSecret": ""}');
-			if (this.settings.key && typeof secrets.authToken === 'string' && typeof secrets.clientSecret === 'string') {
-				secrets.authToken = await decryptText(this.settings.key, secrets.authToken);
-				secrets.clientSecret = await decryptText(this.settings.key, secrets.clientSecret);
-			}
-			else {
-				secrets.authToken = '';
-				secrets.clientSecret = '';
-			}
-			this.settings = {...this.settings, ...secrets};
+		if (this.settings.clientSecret) {
+			this.settings.clientSecret = await decryptText(key, this.settings.clientSecret);
+		}
+		if (this.settings.authToken) {
+			this.settings.authToken = await decryptText(key, this.settings.authToken);
 		}
 	}
 
 	async saveSettings() {
-		this.settings.key = generateKey();
-		// Store encrypted secrets in the local storage
-		window.localStorage.setItem('mastodon-threading-client', JSON.stringify({
-			authToken: await encryptText(this.settings.key, this.settings.authToken),
-			clientSecret: await encryptText(this.settings.key, this.settings.clientSecret)
-		}));
-		// Store key and other settings in filesystem
-		await this.saveData({...this.settings, clientSecret: '', authToken: ''});
+		const key = await generateKey(this.app.vault.getName())
+		let eClientSecret = this.settings.clientSecret;
+		let eAuthToken = this.settings.authToken;
+		if (eClientSecret) {
+			eClientSecret = await encryptText(key, eClientSecret);
+		}
+		if (eAuthToken) {
+			eAuthToken = await encryptText(key, eAuthToken);
+		}
+		// Store key and other settings in filesystem, with encrypted secrets
+		await this.saveData({...this.settings, clientSecret: eClientSecret, authToken: eAuthToken});
 	}
 
 	getClient(): mastodon.rest.Client {

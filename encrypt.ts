@@ -63,17 +63,17 @@ const decrypt = async (cipher: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer) => 
 	return decode(encoded)
 }
 
-const generateKey = () => pack(window.crypto.getRandomValues(new Uint8Array(16)));
+const generateKey = (seed: string) => window.crypto.subtle.digest('SHA-256', unpack(seed));
 
-const encryptText = async (key: string, text: string) => {
-	const cryptoKey = await importKey(unpack(key));
+const encryptText = async (key: ArrayBuffer, text: string) => {
+	const cryptoKey = await importKey(key);
 	const {cipher, iv} = await encrypt(text, cryptoKey)
 	return pack(iv) + ':' + pack(cipher);
 }
 
-const decryptText = async (key: string, text: string) => {
+const decryptText = async (key: ArrayBuffer, text: string) => {
 	if (text) {
-		const cryptoKey = await importKey(unpack(key));
+		const cryptoKey = await importKey(key);
 		let textParts = text.split(":");
 		let iv = textParts.shift();
 		if (iv) {
