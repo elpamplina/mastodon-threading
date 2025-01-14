@@ -1,7 +1,7 @@
 {
 	"settings": {
 		"server": "Mastodon server",
-		"server_desc": "i.e. mastodon.social",
+		"server_desc": "e.g. mastodon.social",
 		"server_hint": "Domain name",
 		"connect_status": "Connected to Mastodon at {{server}}",
 		"disconnect": "Disconnect",
