@@ -103,13 +103,24 @@ function separatorField(plugin: MastodonThreading) {
 	});
 }
 
+function replaceSeparators(element: HTMLElement) {
+    for (let i = 0; i < element.childNodes.length; i++) {
+        const node = element.childNodes[i];
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent?.trimStart();
+			if (text && text.startsWith(SEPARATOR)) {
+				element.insertBefore(document.createElement('hr'), node);
+				element.insertBefore(
+					document.createTextNode(text.replace(new RegExp(`^${SEPARATOR}`), '')), node);
+				element.removeChild(node);
+			}
+        } else {
+            replaceSeparators(node as HTMLElement);
+        }
+    }
+}
+
 const separatorPostProcessor: MarkdownPostProcessor =
-	(element, context) => {
-		let text = element.innerHTML;
-		if (text !== null) {
-			text = text.replace(new RegExp(SEPARATOR, "g"), '<hr>');
-			element.innerHTML = text;
-		}
-	}
+	(element, context) => replaceSeparators(element);
 
 export {SEPARATOR, separatorField, separatorPostProcessor, pattern_url, pattern_image, pattern_quote, pattern_server}

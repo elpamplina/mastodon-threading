@@ -1,4 +1,16 @@
-import {addIcon, App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile} from 'obsidian';
+import {
+	addIcon,
+	App,
+	Editor,
+	MarkdownView,
+	Modal,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	requestUrl,
+	Setting,
+	TFile
+} from 'obsidian';
 import {createApp, getAuthToken, getAuthURL, getClient} from "./auth";
 import {mastodon} from "masto";
 import * as lang_en from 'lang/en.json';
@@ -518,10 +530,10 @@ class MastodonThreadingSettingTab extends PluginSettingTab {
 										this.plugin.settings.clientSecret = resp.clientSecret;
 										await this.plugin.saveSettings();
 										// Async get max characters allowed
-										fetch(`https://${this.plugin.settings.server}/api/v2/instance`)
+										requestUrl(`https://${this.plugin.settings.server}/api/v2/instance`)
 											.then(resp => {
 												if (resp.status == 200) {
-													return resp.json();
+													return resp.json;
 												}
 											})
 											.then(async data => {
