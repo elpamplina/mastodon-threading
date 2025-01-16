@@ -247,8 +247,13 @@ export default class MastodonThreading extends Plugin {
 						if (this.settings.serverMimeTypes.includes(mime.getType(m[2].toLowerCase()) || '-')) {
 							let file = this.app.vault.getFileByPath(m[1]);
 							if (file === null) {
-								new Notice(t('error.file_not_found'));
-								return;
+								// Try on the attachment folder
+								// @ts-ignore
+								file = this.app.vault.getFileByPath(`${this.app.vault.getConfig("attachmentFolderPath")}/${m[1]}`);
+								if (file === null) {
+									new Notice(t('error.file_not_found'));
+									return;
+								}
 							}
 							if (file.stat.size > this.settings.serverMaxImage) {
 								new Notice(t('error.file_size_exceeded'));

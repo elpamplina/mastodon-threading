@@ -1,6 +1,6 @@
 {
 	"name": "mastodon-threading",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"description": "Obsidian plugin to compose and post threads to Mastodon",
 	"main": "main.js",
 	"scripts": {
