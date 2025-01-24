@@ -193,6 +193,8 @@ export default class MastodonThreading extends Plugin {
 			editor.getCursor().ch === 0 ? SEPARATOR : `\n${SEPARATOR}`,
 			editor.getCursor()
 		);
+		// Move cursor to the next line, to go on writing
+		editor.setCursor({line: editor.getCursor().line + 2, ch: 0});
 	}
 
 	single_post(editor: Editor) {
