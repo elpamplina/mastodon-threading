@@ -4,9 +4,11 @@ import MastodonThreading from "./main";
 import {MarkdownPostProcessor} from "obsidian";
 
 const SEPARATOR: string = '§'
+const CW: string = '!!'
 const pattern_image = /!\[\[(.*\.(.*?))(\|.*)*]]\s*?((\n>.*)*)/g;
 const pattern_url = /\[.*]\((https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*))\)/g;
 const pattern_separator = new RegExp('^' + SEPARATOR, 'm');
+const pattern_warning = new RegExp('^' + CW + ' (.*)$', 'm');
 const pattern_quote = /^>.*\n/gm;
 const pattern_server = /(https?:\/\/)?([-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6})\b.*$/gm;
 
@@ -81,8 +83,8 @@ function separatorField(plugin: MastodonThreading) {
 						last_start_pos = 0;
 						last_end_pos = 0;
 					}
-					// Quote blocks ignored
-					if (!lin.startsWith('>')) {
+					// Quote and warning blocks ignored
+					if (!lin.startsWith('>') && !lin.startsWith(CW)) {
 						text += lin;
 					}
 				}
@@ -123,4 +125,4 @@ function replaceSeparators(element: HTMLElement) {
 const separatorPostProcessor: MarkdownPostProcessor =
 	(element, context) => replaceSeparators(element);
 
-export {SEPARATOR, separatorField, separatorPostProcessor, pattern_url, pattern_image, pattern_quote, pattern_server}
+export {SEPARATOR, separatorField, separatorPostProcessor, pattern_url, pattern_image, pattern_quote, pattern_server, pattern_warning}

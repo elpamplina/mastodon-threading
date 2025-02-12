@@ -15,7 +15,7 @@ Making threads can be tedious, manually pasting text and images. This plugin all
 This plugin can:
 - Insert thread separators manually or automatically.
 - Visualize the order of fragments and their size as they are typed.
-- Add descriptions to images to facilitate accessibility for people with visual impairments.
+- Add descriptions to images and other media to facilitate accessibility for people with visual impairments.
 - Submit individual posts or entire threads directly to the Mastodon server, checking the size limitations and different types of visibility supported by the server.
 
 ## Installation
@@ -112,13 +112,17 @@ In Obsidian's view mode, separators appear as simple horizontal lines with no co
 
 When the plugin is disabled, or when copying text somewhere outside the vault, separators are displayed with the typographical paragraph symbol (§).
 
-### Quotes and image descriptions
+### Quotes and media descriptions
 
-The plugin uses quote blocks (starting with the Markdown symbol ">") to add descriptions to images. Just add a quote after an image, and it will be sent as description.
+The plugin uses quote blocks (starting with the Markdown symbol ">") to add descriptions to images and other media. Just add a quote after a media, and it will be sent as description.
 
 ![Screen capture with an image with description](img/images.png)
 
 Quote blocks that are not directly behind an image will be ignored and will not be sent as part of the thread. Feel free to use them as a place to keep comments or notes. 
+
+### Content warning
+
+Starting a line with "!!" symbols will make it a content warning (aka spoiler text). Mastodon will show the rest of the post collapsed behind this warning.
 
 ## Questions, suggestions or bugs
 

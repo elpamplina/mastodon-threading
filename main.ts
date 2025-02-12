@@ -19,7 +19,7 @@ import {
 	pattern_image,
 	pattern_quote,
 	pattern_server,
-	pattern_url,
+	pattern_url, pattern_warning,
 	SEPARATOR,
 	separatorField,
 	separatorPostProcessor
@@ -226,6 +226,7 @@ export default class MastodonThreading extends Plugin {
 			if (editor.getValue()) {
 				type postMetadata = {
 					text: string,
+					warning: string | null,
 					images: {
 						file: TFile,
 						alt: string
@@ -242,6 +243,7 @@ export default class MastodonThreading extends Plugin {
 					}
 					let post: postMetadata = {
 						text: c,
+						warning: null,
 						images: []
 					}
 					// Get images metadata
@@ -278,21 +280,33 @@ export default class MastodonThreading extends Plugin {
 								alt: desc
 							});
 						}
+						else {
+							new Notice(t('error.filetype_not_allowed'));
+							return;
+						}
 					}
 					if (post.images.length > this.settings.serverMaxAttachments) {
 						new Notice(t('error.attachment_exceeded', {max: this.settings.serverMaxAttachments}));
 						return;
 					}
+					// Find content warning
+					let found_warning = post.text.match(pattern_warning);
+					console.log(found_warning)
+					if (found_warning) {
+						post.warning = found_warning[1];
+					}
 					// Remove images from main text
 					post.text = post.text.replace(pattern_image, ' ')
 					// Simplify links
 						.replace(pattern_url, '$1')
+					// Remove warning blocks
+						.replace(pattern_warning, '')
 					// Remove quote blocks
 						.replace(pattern_quote, '')
 					// Finally, strip spaces
 						.trim();
 					// Add counter
-					if (this.settings.postCounter) {
+					if (this.settings.postCounter && chunks.length > 1) {
 						post.text += `\n[${++count}/${chunks.length}]`;
 					}
 					if (post.text.length > this.settings.maxPost) {
@@ -317,6 +331,7 @@ export default class MastodonThreading extends Plugin {
 								}
 								let status: mastodon.v1.Status = await this.getClient().v1.statuses.create({
 									status: p.text,
+									spoilerText: p.warning,
 									visibility: (first ? visibility_first : visibility_rest),
 									inReplyToId: id_link,
 									mediaIds: media,
@@ -549,8 +564,7 @@ class MastodonThreadingSettingTab extends PluginSettingTab {
 												this.plugin.settings.serverMaxDescription = data.configuration.media_attachments.description_limit;
 												this.plugin.settings.serverMaxImage = data.configuration.media_attachments.image_size_limit;
 												this.plugin.settings.serverMaxAttachments = data.configuration.statuses.max_media_attachments;
-												this.plugin.settings.serverMimeTypes =
-													data.configuration.media_attachments.supported_mime_types.filter((m: string) => m.startsWith('image/'));
+												this.plugin.settings.serverMimeTypes = data.configuration.media_attachments.supported_mime_types;
 												await this.plugin.saveSettings();
 												this.display();
 											})

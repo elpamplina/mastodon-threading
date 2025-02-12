@@ -55,6 +55,7 @@
 		"alt_exceeded": "NOT SENT: More than {{max}} characters in description.",
 		"attachment_exceeded": "NOT SENT: More than {{max}} images in one post.",
 		"void_fragment": "NOT SENT: Can't send empty fragments!",
-		"file_not_found": "ERROR: Attachment file not found."
+		"file_not_found": "ERROR: Attachment file not found.",
+		"filetype_not_allowed": "ERROR: Attachment type not supported."
 	}
 }
