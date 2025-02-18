@@ -20,11 +20,15 @@ This plugin can:
 
 ## Installation
 
-This plugin is tested under Obsidian v1.7.7. It may work with older versions, but it is untested.
+This plugin is tested under Obsidian v1.7.7. It may not work with older versions.
 
 To install Obsidian, download it from the [official site](https://obsidian.md/) and follow their instructions. Once you have Obsidian installed and created your vault, you can proceed to install the plugin.
 
-> ATTENTION: This plugin is in testing and has not yet been included in the official Obsidian repository. At the moment, the only way to install it is manually, and you do so at YOUR OWN RESPONSIBILITY. I cannot be held responsible for any information or resources that may be damaged. You're warned.
+### Install from official repository (RECOMMENDED)
+- Open settings -> Community plugins
+- Disable Restricted mode
+- Click Browse community plugins and search for "Mastodon Threading".
+- Click Enable
 
 ### Manual installation
 
