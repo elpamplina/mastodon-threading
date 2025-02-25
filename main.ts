@@ -41,6 +41,7 @@ interface MastodonThreadingSettings {
 	maxPost: number,
 	serverMaxPost: number,
 	serverMaxImage: number,
+	serverMaxVideo: number,
 	serverMaxAttachments: number,
 	serverMaxDescription: number,
 	serverMimeTypes: string[],
@@ -57,6 +58,7 @@ const DEFAULT_SETTINGS: MastodonThreadingSettings = {
 	maxPost: 500,
 	serverMaxPost: 500,
 	serverMaxImage: 10485760,
+	serverMaxVideo: 103809024,
 	serverMaxAttachments: 4,
 	serverMaxDescription: 1500,
 	serverMimeTypes: [
@@ -251,7 +253,8 @@ export default class MastodonThreading extends Plugin {
 					}
 					// Get images metadata
 					for (let m of post.text.matchAll(pattern_image)) {
-						if (this.settings.serverMimeTypes.includes(mime.getType(m[2].toLowerCase()) || '-')) {
+						let mimetype = mime.getType(m[2].toLowerCase()) || '-'
+						if (this.settings.serverMimeTypes.includes(mimetype)) {
 							let file = this.app.vault.getFileByPath(m[1]);
 							if (file === null) {
 								// Try on the attachment folder
@@ -262,7 +265,7 @@ export default class MastodonThreading extends Plugin {
 									return;
 								}
 							}
-							if (file.stat.size > this.settings.serverMaxImage) {
+							if (file.stat.size > (mimetype.startsWith('image') ? this.settings.serverMaxImage : this.settings.serverMaxVideo)) {
 								new Notice(t('error.file_size_exceeded'));
 								return;
 							}
@@ -294,7 +297,6 @@ export default class MastodonThreading extends Plugin {
 					}
 					// Find content warning
 					let found_warning = post.text.match(pattern_warning);
-					console.log(found_warning)
 					if (found_warning) {
 						post.warning = found_warning[1];
 					}
@@ -390,11 +392,17 @@ export default class MastodonThreading extends Plugin {
 	async loadSettings() {
 		const key = await generateKey(this.app.vault.getName())
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		if (this.settings.clientSecret) {
-			this.settings.clientSecret = await decryptText(key, this.settings.clientSecret);
+		try {
+			if (this.settings.clientSecret) {
+				this.settings.clientSecret = await decryptText(key, this.settings.clientSecret);
+			}
+			if (this.settings.authToken) {
+				this.settings.authToken = await decryptText(key, this.settings.authToken);
+			}
 		}
-		if (this.settings.authToken) {
-			this.settings.authToken = await decryptText(key, this.settings.authToken);
+		catch (err) {
+			this.settings.clientSecret = '';
+			this.settings.authToken = '';
 		}
 	}
 
@@ -566,6 +574,7 @@ class MastodonThreadingSettingTab extends PluginSettingTab {
 												this.plugin.settings.maxPost = this.plugin.settings.serverMaxPost;
 												this.plugin.settings.serverMaxDescription = data.configuration.media_attachments.description_limit;
 												this.plugin.settings.serverMaxImage = data.configuration.media_attachments.image_size_limit;
+												this.plugin.settings.serverMaxVideo = data.configuration.media_attachments.video_size_limit;
 												this.plugin.settings.serverMaxAttachments = data.configuration.statuses.max_media_attachments;
 												this.plugin.settings.serverMimeTypes = data.configuration.media_attachments.supported_mime_types;
 												await this.plugin.saveSettings();

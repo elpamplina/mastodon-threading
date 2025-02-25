@@ -39,15 +39,18 @@ const pack = (buffer: ArrayBuffer) => {
 	)
 }
 
-const unpack = (packed: string) => {
-	const string = window.atob(packed)
+function string_to_buffer(string: string) {
 	const buffer = new ArrayBuffer(string.length)
 	const bufferView = new Uint8Array(buffer)
 
 	for (let i = 0; i < string.length; i++) {
 		bufferView[i] = string.charCodeAt(i)
 	}
-	return buffer
+	return buffer;
+}
+
+const unpack = (packed: string) => {
+	return string_to_buffer(window.atob(packed));
 }
 
 const decode = (bytestream: Uint8Array) => {
@@ -63,7 +66,7 @@ const decrypt = async (cipher: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer) => 
 	return decode(encoded)
 }
 
-const generateKey = (seed: string) => window.crypto.subtle.digest('SHA-256', unpack(encodeURIComponent(seed)));
+const generateKey = (seed: string) => window.crypto.subtle.digest('SHA-256', string_to_buffer(encodeURIComponent(seed)));
 
 const encryptText = async (key: ArrayBuffer, text: string) => {
 	const cryptoKey = await importKey(key);
