@@ -15,6 +15,7 @@ import {createApp, getAuthToken, getAuthURL, getClient} from "./auth";
 import {mastodon} from "masto";
 import * as lang_en from 'lang/en.json';
 import * as lang_es from 'lang/es.json';
+import * as lang_de from 'lang/de.json';
 import {
 	pattern_image,
 	pattern_quote,
@@ -79,6 +80,8 @@ export default class MastodonThreading extends Plugin {
 		i18next.addResourceBundle('en', 'plugin-mastodon-threading', lang_en);
 		// @ts-ignore
 		i18next.addResourceBundle('es', 'plugin-mastodon-threading', lang_es);
+		// @ts-ignore
+		i18next.addResourceBundle('de', 'plugin-mastodon-threading', lang_de);
 
 		addIcon('mastodon', '<defs id="defs1" /><path style="display:inline;opacity:1;fill:transparent;stroke:currentColor;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="M 80.194896,7.041879 C 61.252354,7.004439 40.245295,6.974149 19.993422,6.993209 12.868784,6.999909 7.088956,12.786413 7.085298,19.908809 7.073308,43.258638 7.065028,75.760167 7.065028,75.760167 l 73.162106,0.0275 A 12.80697,12.802919 0 0 0 93.038918,62.984751 V 19.908797 c 0,-7.09135 -5.750482,-12.852867 -12.844057,-12.86693 z" id="path2" /><path style="display:inline;opacity:1;fill:transparent;stroke:currentColor;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="m 7.065023,75.787671 v 8.597485 a 8.6001932,8.5974803 0 0 0 8.600193,8.597481 h 34.400786" id="path3" /><path style="display:inline;opacity:1;fill:transparent;stroke:currentColor;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="M 71.467494,58.597486 V 32.805037 c 0,-12.896225 -21.478791,-12.765944 -21.467494,0 V 50 l 4e-6,-17.194965 c 0.01118,-12.765944 -21.467493,-12.896225 -21.467495,0 v 25.792451" id="path4-3" />');
 		await this.loadSettings();

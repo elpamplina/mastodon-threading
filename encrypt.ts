@@ -63,7 +63,7 @@ const decrypt = async (cipher: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer) => 
 	return decode(encoded)
 }
 
-const generateKey = (seed: string) => window.crypto.subtle.digest('SHA-256', unpack(seed));
+const generateKey = (seed: string) => window.crypto.subtle.digest('SHA-256', unpack(encodeURIComponent(seed)));
 
 const encryptText = async (key: ArrayBuffer, text: string) => {
 	const cryptoKey = await importKey(key);

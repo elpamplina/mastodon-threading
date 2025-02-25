@@ -136,7 +136,7 @@ Please note that this is a side project I'm working on in my spare time. I canno
 
 ## Internationalization
 
-Language definitions are in the `lang` folder. Currently only English (default) and Spanish are supported. Constributions in other languages are GREATLY APPRECIATED!!
+Language definitions are in the `lang` folder. Currently only some languages are supported. Constributions in other languages are GREATLY APPRECIATED!!
 
 Please send your language definitions via Pull Request on Github, or contact me at <elpamplinadecai@gmail.com> for further instructions.
 
@@ -149,6 +149,7 @@ This plugin is free software, released under the [General Public License version
 This plugin is made and maintained as a side project for amusement only.
 
 - Many thanks to Ulises Lafuente (@Rataunderground@paquita.masto.host) for adapting the Mastodon icon.
+- Thanks to [platypusgit](https://github.com/platypusgit) for the German translation.
 - Thanks to Eugen Rochko and all the Mastodon team for creating the best open and free social network ruled by the people.
 - Thanks to Ryō Igarashi for maintaining the masto.js library.
 - Thanks to the people at Obsidian for this great software.
