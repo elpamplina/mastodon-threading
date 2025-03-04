@@ -23,7 +23,8 @@
 			"public_not_recommended": "Public (not recommended)",
 			"unlisted": "Quiet public (unlisted and not searchable)",
 			"private": "Private (only followers)"
-		}
+		},
+		"default_language": "Default post language"
 	},
 	"modal": {
 		"send_thread_count": "Send thread to Mastodon with {{count}} posts",
@@ -31,7 +32,8 @@
 		"visibility_first": "First post visibility",
 		"visibility_rest": "Visibility of other posts",
 		"submit": "Send",
-		"no_description": "WARNING: There're images without description. Send anyway?"
+		"no_description": "WARNING: There're images without description. Send anyway?",
+		"post_language": "Posts language"
 	},
 	"command": {
 		"single_post": "Send single post to Mastodon",
@@ -42,7 +44,8 @@
 	},
 	"ok": {
 		"message_posted": "Message posted",
-		"thread_posted": "Thread posted"
+		"thread_posted": "Thread posted",
+		"sending": "Sending {{n}} of {{total}}..."
 	},
 	"error": {
 		"session_lost": "The Mastodon session is lost!",
@@ -56,6 +59,7 @@
 		"attachment_exceeded": "NOT SENT: More than {{max}} images in one post.",
 		"void_fragment": "NOT SENT: Can't send empty fragments!",
 		"file_not_found": "ERROR: Attachment file not found.",
-		"filetype_not_allowed": "ERROR: Attachment type not supported."
+		"filetype_not_allowed": "ERROR: Attachment type not supported.",
+		"rate_limit": "ERROR: Post limit reached. Wait 5 minutes and retry."
 	}
 }

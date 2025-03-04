@@ -73,6 +73,7 @@ If the process fails, you can start it from the beginning as many times as neces
 ### Other settings
 
 - **Post size**: Sets the maximum post size that the plugin will send to Mastodon. By default, it is set to the maximum allowed by your server. This value is taken into account while editing the text, when preparing the submission, and also when using the auto-split command.
+- **Default post language**: Language code that will be sent to the Mastodon server. By default, the same of the Obsidian interface is chosen.
 - **First post visibility**: Sets the default visibility of the first post in the thread. This will be "public" by default.
 - **Next posts visibility**: Sets the default visibility of the second and subsequent posts in the thread. This will be "quiet public" by default.
 - **Post counter**: Sets whether to insert the fragment number at the end of each post (e.g. `[1/10]`). By default, this is disabled.
@@ -115,6 +116,12 @@ When the maximum size is exceeded, this is indicated visually by turning the cou
 In Obsidian's view mode, separators appear as simple horizontal lines with no counter.
 
 When the plugin is disabled, or when copying text somewhere outside the vault, separators are displayed with the typographical paragraph symbol (§).
+
+### Media attachments
+
+The plugin manages the images, videos and other media that are supported by the Mastodon server. In addition to the limitations in the number of files, their types and sizes, the Mastodon protocol also prohibits mixing videos and images in the same post, as well as add more than one video in the same post. 
+
+The plugin takes into account all this and, in the event that some attachment does not meet the limitations of the server, an error message is shown BEFORE starting to send the thread.
 
 ### Quotes and media descriptions
 

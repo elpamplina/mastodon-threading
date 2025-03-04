@@ -13,6 +13,7 @@ import {
 } from 'obsidian';
 import {createApp, getAuthToken, getAuthURL, getClient} from "./auth";
 import {mastodon} from "masto";
+import * as masto_languages from 'lang/mastodon-languages.json';
 import * as lang_en from 'lang/en.json';
 import * as lang_es from 'lang/es.json';
 import * as lang_de from 'lang/de.json';
@@ -48,6 +49,7 @@ interface MastodonThreadingSettings {
 	visibilityFirst: mastodon.v1.StatusVisibility,
 	visibilityRest: mastodon.v1.StatusVisibility,
 	postCounter: boolean,
+	defaultLanguage: string,
 }
 
 const DEFAULT_SETTINGS: MastodonThreadingSettings = {
@@ -72,6 +74,8 @@ const DEFAULT_SETTINGS: MastodonThreadingSettings = {
 	visibilityFirst: 'public',
 	visibilityRest: 'unlisted',
 	postCounter: false,
+	// @ts-ignore
+	defaultLanguage: i18next.language?.split('-')[0] || 'en',
 }
 
 export default class MastodonThreading extends Plugin {
@@ -214,7 +218,11 @@ export default class MastodonThreading extends Plugin {
 		}
 		if (message) {
 			new SendSinglePostModal(this.app, this, (visibility) => {
-				this.getClient().v1.statuses.create({status: message, visibility: visibility})
+				this.getClient().v1.statuses.create({
+					status: message,
+					visibility: visibility,
+					language: this.settings.defaultLanguage,
+				})
 					.then(status => {
 						new Notice(t('ok.message_posted'));
 					})
@@ -228,13 +236,16 @@ export default class MastodonThreading extends Plugin {
 
 	async thread_post(editor: Editor) {
 		try {
+			const limit = await this.getInstanceInfo(); // Update server parameters and check availability
+			let requests = 0;
 			if (editor.getValue()) {
 				type postMetadata = {
 					text: string,
 					warning: string | null,
 					images: {
 						file: TFile,
-						alt: string
+						alt: string,
+						isimage: boolean,
 					}[]
 				}
 				let chunks = editor.getValue().split(SEPARATOR);
@@ -255,6 +266,21 @@ export default class MastodonThreading extends Plugin {
 					for (let m of post.text.matchAll(pattern_image)) {
 						let mimetype = mime.getType(m[2].toLowerCase()) || '-'
 						if (this.settings.serverMimeTypes.includes(mimetype)) {
+							// Only one video allowed, not mixed with images
+							if (post.images.length > 0) {
+								if (mimetype.startsWith('image')) {
+									if (post.images.some(it => !it.isimage)) {
+										// Trying to add image to videos
+										new Notice(t('error.filetype_not_allowed'));
+										return;
+									}
+								}
+								else {
+									// Trying to add video to another media
+									new Notice(t('error.filetype_not_allowed'));
+									return;
+								}
+							}
 							let file = this.app.vault.getFileByPath(m[1]);
 							if (file === null) {
 								// Try on the attachment folder
@@ -283,8 +309,10 @@ export default class MastodonThreading extends Plugin {
 							}
 							post.images.push({
 								file: file,
-								alt: desc
+								alt: desc,
+								isimage: mimetype.startsWith('image'),
 							});
+							requests++;
 						}
 						else {
 							new Notice(t('error.filetype_not_allowed'));
@@ -319,13 +347,21 @@ export default class MastodonThreading extends Plugin {
 						return;
 					}
 					posts.push(post);
+					requests++;
 				}
-				new SendThreadModal(this.app, this, posts.length, async (visibility_first, visibility_rest) => {
+				if (limit != null && requests > limit) {
+					new Notice(t('error.rate_limit'));
+					return;
+				}
+				new SendThreadModal(this.app, this, posts.length, async (language, visibility_first, visibility_rest) => {
 					if (descriptions || confirm(t('modal.no_description'))) {
 						try {
 							let first = true;
 							let id_link: string | null = null;
-							for (let p of posts) {
+							for (const [i, p] of posts.entries()) {
+								if (i % 10 === 0) {
+									new Notice(t('ok.sending', {'n': (i==0? 1: i), 'total': posts.length}));
+								}
 								let media: string[] = [];
 								for (let img of p.images) {
 									let m = await this.getClient().v2.media.create({
@@ -340,6 +376,7 @@ export default class MastodonThreading extends Plugin {
 									visibility: (first ? visibility_first : visibility_rest),
 									inReplyToId: id_link,
 									mediaIds: media,
+									language: language,
 								});
 								id_link = status.id;
 								first = false;
@@ -435,6 +472,21 @@ export default class MastodonThreading extends Plugin {
 			}
 		}
 	}
+	
+	async getInstanceInfo() {
+		let resp = await requestUrl(`https://${this.settings.server}/api/v2/instance`);
+		if (resp.status == 200) {
+			let info = await resp.json;
+			this.settings.serverMaxPost = info.configuration.statuses.max_characters;
+			this.settings.serverMaxDescription = info.configuration.media_attachments.description_limit;
+			this.settings.serverMaxImage = info.configuration.media_attachments.image_size_limit;
+			this.settings.serverMaxVideo = info.configuration.media_attachments.video_size_limit;
+			this.settings.serverMaxAttachments = info.configuration.statuses.max_media_attachments;
+			this.settings.serverMimeTypes = info.configuration.media_attachments.supported_mime_types;
+			await this.saveSettings();
+		}
+		return parseInt(resp.headers['x-ratelimit-remaining']) || null;
+	}
 }
 
 class SendSinglePostModal extends Modal {
@@ -467,10 +519,23 @@ class SendSinglePostModal extends Modal {
 }
 
 class SendThreadModal extends Modal {
-  constructor(app: App, plugin: MastodonThreading, count: number, onSubmit: (visibility_first: StatusVisibility, visibility_rest: StatusVisibility) => void) {
+  constructor(app: App, plugin: MastodonThreading, count: number, onSubmit: (language: string, visibility_first: StatusVisibility, visibility_rest: StatusVisibility) => void) {
     super(app);
 	this.setTitle(t('modal.send_thread_count', {count: count}));
 
+	let language = plugin.settings.defaultLanguage;
+	new Setting(this.contentEl)
+		.setName(t('modal.post_language'))
+		.addDropdown(dropdown => {
+				for (const lan of masto_languages.languages) {
+					dropdown.addOption(lan[0], `${lan[2]} - ${lan[1]}`);
+				}
+				dropdown.setValue(language)
+				.onChange(async value => {
+					language = value;
+				});
+			}
+		);
 	let visibility_first = plugin.settings.visibilityFirst;
 	new Setting(this.contentEl)
 		.setName(t('modal.visibility_first'))
@@ -502,7 +567,7 @@ class SendThreadModal extends Modal {
           .setCta()
           .onClick(() => {
             this.close();
-            onSubmit(visibility_first, visibility_rest);
+            onSubmit(language, visibility_first, visibility_rest);
           }));
   }
 }
@@ -562,25 +627,12 @@ class MastodonThreadingSettingTab extends PluginSettingTab {
 										this.plugin.settings.clientId = resp.clientId;
 										this.plugin.settings.clientSecret = resp.clientSecret;
 										await this.plugin.saveSettings();
-										// Async get max characters allowed
-										requestUrl(`https://${this.plugin.settings.server}/api/v2/instance`)
-											.then(resp => {
-												if (resp.status == 200) {
-													return resp.json;
-												}
-											})
-											.then(async data => {
-												this.plugin.settings.serverMaxPost = data.configuration.statuses.max_characters;
-												this.plugin.settings.maxPost = this.plugin.settings.serverMaxPost;
-												this.plugin.settings.serverMaxDescription = data.configuration.media_attachments.description_limit;
-												this.plugin.settings.serverMaxImage = data.configuration.media_attachments.image_size_limit;
-												this.plugin.settings.serverMaxVideo = data.configuration.media_attachments.video_size_limit;
-												this.plugin.settings.serverMaxAttachments = data.configuration.statuses.max_media_attachments;
-												this.plugin.settings.serverMimeTypes = data.configuration.media_attachments.supported_mime_types;
-												await this.plugin.saveSettings();
-												this.display();
-											})
-											.catch(err => console.error(err));
+										// Get instance parameters and update default preferences
+										this.plugin.getInstanceInfo().then(() => {
+											this.plugin.settings.maxPost = this.plugin.settings.serverMaxPost;
+											this.plugin.saveSettings();
+											this.display();
+										}).catch(err => console.error(err));
 									} else {
 										new Notice(t('settings.error'));
 										return;
@@ -640,6 +692,19 @@ class MastodonThreadingSettingTab extends PluginSettingTab {
 						this.display();
 					}
 				}));
+		new Setting(containerEl)
+			.setName(t('settings.default_language'))
+			.addDropdown(dropdown => {
+					for (const lan of masto_languages.languages) {
+						dropdown.addOption(lan[0], `${lan[2]} - ${lan[1]}`);
+					}
+					dropdown.setValue(this.plugin.settings.defaultLanguage)
+					.onChange(async value => {
+						this.plugin.settings.defaultLanguage = value;
+						await this.plugin.saveSettings();
+					});
+				}
+			);
 		new Setting(containerEl)
 			.setName(t('settings.visibility_first'))
 			.setDesc(t('settings.visibility_first_desc'))

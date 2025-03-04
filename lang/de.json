@@ -23,7 +23,8 @@
 			"public_not_recommended": "Öffentlich (Nicht empfohlen)",
 			"unlisted": "Öffentlich (still) (ungelistet und nicht im Such-Algorithmus)",
 			"private": "Follower (nur Personen, die dir folgen)"
-		}
+		},
+		"default_language": "Standardpostsprache"
 	},
 	"modal": {
 		"send_thread_count": "Versende einen Thread an Mastodon mit {{count}} Beiträgen",
@@ -31,7 +32,8 @@
 		"visibility_first": "Sichtbarkeit des ersten Beitrags",
 		"visibility_rest": "Sichtbarkeit der folgenden Beiträge im Thread",
 		"submit": "Versenden",
-		"no_description": "WARNUNG: Es sind Dateien ohne Beschreibung vorhanden. Trotzdem versenden?"
+		"no_description": "WARNUNG: Es sind Dateien ohne Beschreibung vorhanden. Trotzdem versenden?",
+		"post_language": "Sprache der Beiträge"
 	},
 	"command": {
 		"single_post": "Versende einen einzelnen Beitrag an Mastodon",
@@ -42,7 +44,8 @@
 	},
 	"ok": {
 		"message_posted": "Beitrag versendet",
-		"thread_posted": "Thread versendet"
+		"thread_posted": "Thread versendet",
+		"sending": "{{n}} von {{total}} einreichen..."
 	},
 	"error": {
 		"session_lost": "Die Mastodon-Session wurde getrennt!",
@@ -56,6 +59,7 @@
 		"attachment_exceeded": "NICHT VERSENDET: Mehr als {{max}} angehängte Dateien in einem Beitrag.",
 		"void_fragment": "NICHT VERSENDET: Leere Fragmente können nicht versendet werden! (z.B. Leerzeilen außerhalb des Threads)",
 		"file_not_found": "FEHLER: Angehängte Dateien konnten nicht gefunden werden.",
-		"filetype_not_allowed": "FEHLER: Typ des Anhangs wird nicht unterstützt."
+		"filetype_not_allowed": "FEHLER: Typ des Anhangs wird nicht unterstützt.",
+		"rate_limit": "FEHLER: Postlimit erreicht. Warten Sie 5 Minuten und versuchen Sie es erneut."
 	}
 }

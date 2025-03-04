@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.0](https://github.com/elpamplina/mastodon-threading/compare/1.0.9...1.1.0)
+
+### New features
+
+* Now you can establish the language code that will be sent to the Mastodon server. This meets the protocol so that the posts are better handled by apps.
+* Better control of the types of attachments to prevent the media being rejected by the server.
+* Control of the number of requests to respect the posts limit established by the server. This prevents long threads being rejected.
+* Better server availability detection.
+
 ## [1.0.9](https://github.com/elpamplina/mastodon-threading/compare/1.0.8...1.0.9)
 
 ### Bug fixes
