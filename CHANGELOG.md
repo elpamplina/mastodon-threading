@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1](https://github.com/elpamplina/mastodon-threading/compare/1.1.0...1.1.1)
+
+### Bug fixes
+
+* Fixed "file not found" when attachment folder were configured by relative notation.
+
 ## [1.1.0](https://github.com/elpamplina/mastodon-threading/compare/1.0.9...1.1.0)
 
 ### New features

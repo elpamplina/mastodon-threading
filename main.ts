@@ -285,7 +285,7 @@ export default class MastodonThreading extends Plugin {
 							if (file === null) {
 								// Try on the attachment folder
 								// @ts-ignore
-								file = this.app.vault.getFileByPath(`${this.app.vault.getConfig("attachmentFolderPath")}/${m[1]}`);
+								file = this.app.vault.getFileByPath(`${this.app.vault.getConfig("attachmentFolderPath").replace(/^\.\//, '')}/${m[1]}`);
 								if (file === null) {
 									new Notice(t('error.file_not_found'));
 									return;
