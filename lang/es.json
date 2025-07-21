@@ -56,11 +56,11 @@
 		"no_selection": "¡No hay texto seleccionado!",
 		"no_text": "¡No hay texto para enviar!",
 		"size_exceeded": "NO ENVIADO: Se superan los {{max}} caracteres.",
-		"file_size_exceeded": "NO ENVIADO: Se supera el tamaño de archivo adjunto.",
+		"file_size_exceeded": "NO ENVIADO: Se supera el tamaño de archivo adjunto: {{file}}",
 		"alt_exceeded": "NO ENVIADO: Se superan los {{max}} caracteres en la descripción.",
 		"attachment_exceeded": "NO ENVIADO: Se superan las {{max}} imágenes en un post.",
 		"void_fragment": "NO ENVIADO: Hay fragmentos vacíos.",
-		"file_not_found": "ERROR: Archivo adjunto no encontrado.",
+		"file_not_found": "ERROR: Archivo adjunto no encontrado: {{file}}",
 		"filetype_not_allowed": "ERROR: Tipo de adjunto no soportado.",
 		"rate_limit": "ERROR: Límite de posts alcanzado. Espera 5 minutos para reintentar."
 	}

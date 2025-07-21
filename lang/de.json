@@ -54,11 +54,11 @@
 		"no_selection": "Kein Text ausgewählt!",
 		"no_text": "Kein Text zum Versenden!",
 		"size_exceeded": "NICHT VERSENDET: Mehr als {{max}} Zeichen in einem Beitrag.",
-		"file_size_exceeded": "NICHT VERSENDET: Größe der Anhänge wurde überschritten.",
+		"file_size_exceeded": "NICHT VERSENDET: Größe der Anhänge wurde überschritten: {{file}}",
 		"alt_exceeded": "NICHT VERSENDET: Mehr als {{max}} Zeichen in der Beschreibung.",
 		"attachment_exceeded": "NICHT VERSENDET: Mehr als {{max}} angehängte Dateien in einem Beitrag.",
 		"void_fragment": "NICHT VERSENDET: Leere Fragmente können nicht versendet werden! (z.B. Leerzeilen außerhalb des Threads)",
-		"file_not_found": "FEHLER: Angehängte Dateien konnten nicht gefunden werden.",
+		"file_not_found": "FEHLER: Angehängte Dateien konnten nicht gefunden werden: {{file}}",
 		"filetype_not_allowed": "FEHLER: Typ des Anhangs wird nicht unterstützt.",
 		"rate_limit": "FEHLER: Postlimit erreicht. Warten Sie 5 Minuten und versuchen Sie es erneut."
 	}

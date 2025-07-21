@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.2](https://github.com/elpamplina/mastodon-threading/compare/1.1.1...1.1.2)
+
+### New features
+
+* Error messages more informative.
+
 ## [1.1.1](https://github.com/elpamplina/mastodon-threading/compare/1.1.0...1.1.1)
 
 ### Bug fixes

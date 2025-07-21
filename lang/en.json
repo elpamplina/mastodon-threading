@@ -54,11 +54,11 @@
 		"no_selection": "No text selected!",
 		"no_text": "No text to send!",
 		"size_exceeded": "NOT SENT: More than {{max}} characters in one post.",
-		"file_size_exceeded": "NOT SENT: Attachment size exceeded.",
+		"file_size_exceeded": "NOT SENT: Attachment size exceeded: {{file}}",
 		"alt_exceeded": "NOT SENT: More than {{max}} characters in description.",
 		"attachment_exceeded": "NOT SENT: More than {{max}} images in one post.",
 		"void_fragment": "NOT SENT: Can't send empty fragments!",
-		"file_not_found": "ERROR: Attachment file not found.",
+		"file_not_found": "ERROR: Attachment file not found: {{file}}",
 		"filetype_not_allowed": "ERROR: Attachment type not supported.",
 		"rate_limit": "ERROR: Post limit reached. Wait 5 minutes and retry."
 	}

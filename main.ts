@@ -271,13 +271,13 @@ export default class MastodonThreading extends Plugin {
 								if (mimetype.startsWith('image')) {
 									if (post.images.some(it => !it.isimage)) {
 										// Trying to add image to videos
-										new Notice(t('error.filetype_not_allowed'));
+										new Notice(t('error.filetype_not_allowed', {file: m[1]}));
 										return;
 									}
 								}
 								else {
 									// Trying to add video to another media
-									new Notice(t('error.filetype_not_allowed'));
+									new Notice(t('error.filetype_not_allowed', {file: m[1]}));
 									return;
 								}
 							}
@@ -287,12 +287,12 @@ export default class MastodonThreading extends Plugin {
 								// @ts-ignore
 								file = this.app.vault.getFileByPath(`${this.app.vault.getConfig("attachmentFolderPath").replace(/^\.\//, '')}/${m[1]}`);
 								if (file === null) {
-									new Notice(t('error.file_not_found'));
+									new Notice(t('error.file_not_found', {file: m[1]}));
 									return;
 								}
 							}
 							if (file.stat.size > (mimetype.startsWith('image') ? this.settings.serverMaxImage : this.settings.serverMaxVideo)) {
-								new Notice(t('error.file_size_exceeded'));
+								new Notice(t('error.file_size_exceeded', {file: m[1]}));
 								return;
 							}
 							let desc: string = '';
