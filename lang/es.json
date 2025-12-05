@@ -39,7 +39,7 @@
 	},
 	"command": {
 		"single_post": "Enviar un post a Mastodon",
-		"send_thread": "Enviar hilo a Mastodon",
+		"send": "Enviar a Mastodon",
 		"insert_separator": "Insertar separador de hilo",
 		"create_fragments": "Insertar separadores de hilo automáticamente",
 		"remove_separators": "Quitar todos los separadores de hilo"
@@ -53,7 +53,6 @@
 		"session_lost": "¡Se ha perdido la sesión con Mastodon!",
 		"not_logged": "No estás conectado a Mastodon. Por favor, revisa los ajustes del complemento.",
 		"not_posted": "ERROR: ¡El mensaje no se ha enviado!",
-		"no_selection": "¡No hay texto seleccionado!",
 		"no_text": "¡No hay texto para enviar!",
 		"size_exceeded": "NO ENVIADO: Se superan los {{max}} caracteres.",
 		"file_size_exceeded": "NO ENVIADO: Se supera el tamaño de archivo adjunto: {{file}}",

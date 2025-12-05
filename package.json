@@ -1,6 +1,6 @@
 {
 	"name": "mastodon-threading",
-	"version": "1.1.2",
+	"version": "1.2.0",
 	"description": "Obsidian plugin to compose and post threads to Mastodon",
 	"main": "main.js",
 	"scripts": {
@@ -12,19 +12,22 @@
 	"author": "El Pamplina de Cai <elpamplinadecai@gmail.com>",
 	"license": "GPLv2",
 	"devDependencies": {
+		"@codemirror/language": "^6.11.3",
 		"@types/mime": "^3.0.4",
-		"@types/node": "^16.11.6",
-		"@typescript-eslint/eslint-plugin": "5.29.0",
-		"@typescript-eslint/parser": "5.29.0",
-		"builtin-modules": "3.3.0",
-		"esbuild": "0.25.0",
-		"obsidian": ">=0.12.12",
-		"tslib": "2.4.0",
-		"typescript": "4.7.4"
+		"@types/node": "^24.10.1",
+		"@typescript-eslint/eslint-plugin": "^5.29.0",
+		"@typescript-eslint/parser": "^5.0.0",
+		"builtin-modules": "5.0.0",
+		"esbuild": "0.27.0",
+		"masto": "^7.7.1",
+		"mime": "^4.1.0",
+		"obsidian": "^1.10.3",
+		"tslib": "2.8.1",
+		"typescript": "5.9.3"
 	},
 	"dependencies": {
-		"@codemirror/language": "^6.10.6",
-		"masto": "^6.10.1",
-		"mime": "^4.0.6"
+		"@codemirror/language": "^6.11.3",
+		"masto": "^7.7.1",
+		"mime": "^4.1.0"
 	}
 }

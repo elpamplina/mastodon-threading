@@ -37,7 +37,7 @@
 	},
 	"command": {
 		"single_post": "Versende einen einzelnen Beitrag an Mastodon",
-		"send_thread": "Versende einen Thread an Mastodon",
+		"send": "Auf Mastodon posten",
 		"insert_separator": "Thread-Trenner manuell einfügen",
 		"create_fragments": "Thread-Trenner automatisch einfügen",
 		"remove_separators": "Alle Thread-Trenner entfernen"
@@ -51,7 +51,6 @@
 		"session_lost": "Die Mastodon-Session wurde getrennt!",
 		"not_logged": "Du bist nicht mit Mastodon verbunden. Bitte überprüfe die Plugin-Einstellungen.",
 		"not_posted": "FEHLER: Dieser Beitrag wurde nicht versendet!",
-		"no_selection": "Kein Text ausgewählt!",
 		"no_text": "Kein Text zum Versenden!",
 		"size_exceeded": "NICHT VERSENDET: Mehr als {{max}} Zeichen in einem Beitrag.",
 		"file_size_exceeded": "NICHT VERSENDET: Größe der Anhänge wurde überschritten: {{file}}",

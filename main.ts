@@ -92,34 +92,24 @@ export default class MastodonThreading extends Plugin {
 		addIcon('mastodon', '<defs id="defs1" /><path style="display:inline;opacity:1;fill:transparent;stroke:currentColor;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="M 80.194896,7.041879 C 61.252354,7.004439 40.245295,6.974149 19.993422,6.993209 12.868784,6.999909 7.088956,12.786413 7.085298,19.908809 7.073308,43.258638 7.065028,75.760167 7.065028,75.760167 l 73.162106,0.0275 A 12.80697,12.802919 0 0 0 93.038918,62.984751 V 19.908797 c 0,-7.09135 -5.750482,-12.852867 -12.844057,-12.86693 z" id="path2" /><path style="display:inline;opacity:1;fill:transparent;stroke:currentColor;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="m 7.065023,75.787671 v 8.597485 a 8.6001932,8.5974803 0 0 0 8.600193,8.597481 h 34.400786" id="path3" /><path style="display:inline;opacity:1;fill:transparent;stroke:currentColor;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" d="M 71.467494,58.597486 V 32.805037 c 0,-12.896225 -21.478791,-12.765944 -21.467494,0 V 50 l 4e-6,-17.194965 c 0.01118,-12.765944 -21.467493,-12.896225 -21.467495,0 v 25.792451" id="path4-3" />');
 		await this.loadSettings();
 
-		// Editor: Send single post
+		// Editor: Send
 		this.registerEvent(
 			this.app.workspace.on('editor-menu', (menu, editor, view) => {
 				menu.addItem((item) => {
 					item
-						.setTitle(t('command.single_post'))
+						.setTitle(t('command.send'))
 						.setIcon('mastodon')
 						.onClick(async () => {
-							this.single_post(editor);
+							await this.thread_post(editor);
 						});
 				});
 			})
 		);
 
-		// Command: Send single post
-		this.addCommand({
-			id: 'send-single-post',
-			name: t('command.single_post'),
-			icon: 'mastodon',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				this.single_post(editor);
-			}
-		});
-
 		// Command: Send thread
 		this.addCommand({
 			id: 'send-thread',
-			name: t('command.send_thread'),
+			name: t('command.send'),
 			icon: 'mastodon',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.thread_post(editor);
@@ -137,7 +127,7 @@ export default class MastodonThreading extends Plugin {
 		});
 
 		// Ribbon: Send thread
-		this.addRibbonIcon('mastodon', t('command.send_thread'), () => {
+		this.addRibbonIcon('mastodon', t('command.send'), () => {
 			const editor = this.app.workspace.activeEditor?.editor;
 			if (editor) {
 				this.thread_post(editor);
@@ -206,39 +196,11 @@ export default class MastodonThreading extends Plugin {
 		editor.setCursor({line: editor.getCursor().line + 2, ch: 0});
 	}
 
-	single_post(editor: Editor) {
-		let message = '';
-		if (editor.getSelection()) {
-			// If some fragments selected, get only the last one
-			let chunks = editor.getSelection().split(SEPARATOR);
-			message = chunks[chunks.length - 1];
-		}
-		else {
-			new Notice(t('error.no_selection'));
-		}
-		if (message) {
-			new SendSinglePostModal(this.app, this, (visibility) => {
-				this.getClient().v1.statuses.create({
-					status: message,
-					visibility: visibility,
-					language: this.settings.defaultLanguage,
-				})
-					.then(status => {
-						new Notice(t('ok.message_posted'));
-					})
-					.catch(err => {
-						console.error(err);
-						new Notice(t('error.not_posted'));
-					});
-			}).open();
-		}
-	}
-
 	async thread_post(editor: Editor) {
 		try {
 			const limit = await this.getInstanceInfo(); // Update server parameters and check availability
 			let requests = 0;
-			if (editor.getValue()) {
+			if (editor.getSelection() || editor.getValue()) {
 				type postMetadata = {
 					text: string,
 					warning: string | null,
@@ -248,7 +210,16 @@ export default class MastodonThreading extends Plugin {
 						isimage: boolean,
 					}[]
 				}
-				let chunks = editor.getValue().split(SEPARATOR);
+				let message: string = '';
+				if (editor.getSelection()) {
+					// If some fragments selected, get only the last one
+					let chunks = editor.getSelection().split(SEPARATOR);
+					message = chunks[chunks.length - 1];
+				}
+				else {
+					message = editor.getValue();
+				}
+				let chunks = message.split(SEPARATOR);
 				let posts: postMetadata[] = [];
 				let count = 0;
 				let descriptions = true;
@@ -381,7 +352,7 @@ export default class MastodonThreading extends Plugin {
 								id_link = status.id;
 								first = false;
 							}
-							new Notice(t('ok.thread_posted'));
+							new Notice(posts.length > 1 ? t('ok.thread_posted') : t('ok.message_posted'));
 						} catch (err) {
 							console.error(err);
 							new Notice(t('error.not_posted'));
@@ -489,39 +460,14 @@ export default class MastodonThreading extends Plugin {
 	}
 }
 
-class SendSinglePostModal extends Modal {
-  constructor(app: App, plugin: MastodonThreading, onSubmit: (visibility: StatusVisibility) => void) {
-    super(app);
-	this.setTitle(t('command.single_post'));
-
-	let visibility = plugin.settings.visibilityFirst;
-	new Setting(this.contentEl)
-		.setName(t('modal.visibility_single'))
-		.addDropdown(dropdown => dropdown
-			.addOption('public', t('settings.visibility.public'))
-			.addOption('unlisted', t('settings.visibility.unlisted'))
-			.addOption('private', t('settings.visibility.private'))
-			.setValue(visibility)
-			.onChange(async value => {
-				visibility = value as StatusVisibility;
-			})
-		);
-    new Setting(this.contentEl)
-      .addButton((btn) =>
-        btn
-          .setButtonText(t('modal.submit'))
-          .setCta()
-          .onClick(() => {
-            this.close();
-            onSubmit(visibility);
-          }));
-  }
-}
-
 class SendThreadModal extends Modal {
   constructor(app: App, plugin: MastodonThreading, count: number, onSubmit: (language: string, visibility_first: StatusVisibility, visibility_rest: StatusVisibility) => void) {
     super(app);
-	this.setTitle(t('modal.send_thread_count', {count: count}));
+	if (count === 1) {
+		this.setTitle(t('command.single_post'));
+	} else {
+		this.setTitle(t('modal.send_thread_count', {count: count}));
+	}
 
 	let language = plugin.settings.defaultLanguage;
 	new Setting(this.contentEl)
@@ -538,28 +484,30 @@ class SendThreadModal extends Modal {
 		);
 	let visibility_first = plugin.settings.visibilityFirst;
 	new Setting(this.contentEl)
-		.setName(t('modal.visibility_first'))
+		.setName(count > 1 ? t('modal.visibility_first') : t('modal.visibility_single'))
 		.addDropdown(dropdown => dropdown
 			.addOption('public', t('settings.visibility.public'))
 			.addOption('unlisted', t('settings.visibility.unlisted'))
 			.addOption('private', t('settings.visibility.private'))
-			.setValue(visibility_first)
+			.setValue(visibility_first as string)
 			.onChange(async value => {
 				visibility_first = value as StatusVisibility;
 			})
 		);
 	let visibility_rest = plugin.settings.visibilityRest;
-	new Setting(this.contentEl)
-		.setName(t('modal.visibility_rest'))
-		.addDropdown(dropdown => dropdown
-			.addOption('public', t('settings.visibility.public_not_recommended'))
-			.addOption('unlisted', t('settings.visibility.unlisted'))
-			.addOption('private', t('settings.visibility.private'))
-			.setValue(visibility_rest)
-			.onChange(async value => {
-				visibility_rest = value as StatusVisibility;
-			})
-		);
+	if (count > 1) {
+		new Setting(this.contentEl)
+			.setName(t('modal.visibility_rest'))
+			.addDropdown(dropdown => dropdown
+				.addOption('public', t('settings.visibility.public_not_recommended'))
+				.addOption('unlisted', t('settings.visibility.unlisted'))
+				.addOption('private', t('settings.visibility.private'))
+				.setValue(visibility_rest as string)
+				.onChange(async value => {
+					visibility_rest = value as StatusVisibility;
+				})
+			);
+	}
     new Setting(this.contentEl)
       .addButton((btn) =>
         btn
