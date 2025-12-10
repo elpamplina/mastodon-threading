@@ -9,6 +9,8 @@
 		"connect_to": "Connect to Mastodon",
 		"connect": "Connect",
 		"error": "Error connecting to server!",
+		"connecting": "Connecting to {{server}}...",
+		"cancel": "Cancel",
 		"max_post": "Post size",
 		"max_post_desc": "{{server}} allows posts up to {{max}} characters.",
 		"visibility_first": "First post visibility",
@@ -24,7 +26,18 @@
 			"unlisted": "Quiet public (unlisted and not searchable)",
 			"private": "Private (only followers)"
 		},
-		"default_language": "Default post language"
+		"default_language": "Default post language",
+		"quote_approval": "Who can quote",
+		"quote_approval_desc": "Decide who can quote your posts",
+		"quote": {
+			"default": "As set on your account",
+			"public": "Everybody",
+			"followers": "Your followers only",
+			"nobody": "Nobody"
+		},
+		"quote_links": "Convert links into quotes",
+		"quote_links_desc": "Links to Mastodon posts will be converted into citations whenever possible.",
+		"quotes_not_supported": "The server doesn't support quotes."
 	},
 	"modal": {
 		"send_thread_count": "Send thread to Mastodon with {{count}} posts",

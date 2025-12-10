@@ -1,12 +1,14 @@
 import {createRestAPIClient, mastodon} from "masto";
 import {requestUrl} from "obsidian";
 
+const SCOPES = 'read:search write:media write:statuses';
+const REDIRECT = 'obsidian://mastodon-threading';
 async function createApp(server: string): Promise<{ clientId: string, clientSecret: string } | null> {
 	try {
 		const params = new URLSearchParams({
 			client_name: 'Mastodon Threading for Obsidian',
-			redirect_uris: 'obsidian://mastodon-threading',
-			scopes: 'read write',
+			redirect_uris: REDIRECT,
+			scopes: SCOPES,
 			website: 'https://github.com/elpamplina/mastodon-threading'
 		});
 		const resp = await requestUrl(
@@ -31,8 +33,8 @@ async function createApp(server: string): Promise<{ clientId: string, clientSecr
 async function getAuthURL(server: string, clientId: string): Promise<string | null> {
 	const params = new URLSearchParams({
 		client_id: clientId,
-		scope: 'write',
-		redirect_uri: 'obsidian://mastodon-threading',
+		scope: SCOPES,
+		redirect_uri: REDIRECT,
 		response_type: 'code',
 	});
 	return `https://${server}/oauth/authorize?${params.toString()}`;
@@ -43,9 +45,8 @@ async function getAuthToken(server: string, clientId: string, clientSecret: stri
 		client_id: clientId,
 		client_secret: clientSecret,
 		code: authCode,
-		redirect_uri: 'obsidian://mastodon-threading',
+		redirect_uri: REDIRECT,
 		grant_type: 'authorization_code',
-		scope: 'write',
 	});
 	const resp = await requestUrl({
 		url: `https://${server}/oauth/token`,

@@ -21,13 +21,16 @@ import {
 	pattern_image,
 	pattern_quote,
 	pattern_server,
-	pattern_url, pattern_warning,
+	pattern_md_link,
+	pattern_url,
+	pattern_warning,
 	SEPARATOR,
 	separatorField,
 	separatorPostProcessor
 } from "./utils";
 import mime from "mime/lite";
 import {decryptText, encryptText, generateKey} from "./encrypt";
+import {QuoteApprovalPolicy} from "masto/dist/esm/mastodon/rest/v1/statuses";
 
 type StatusVisibility = mastodon.v1.StatusVisibility;
 
@@ -46,8 +49,11 @@ interface MastodonThreadingSettings {
 	serverMaxAttachments: number,
 	serverMaxDescription: number,
 	serverMimeTypes: string[],
+	serverSupportsQuotes: boolean,
 	visibilityFirst: mastodon.v1.StatusVisibility,
 	visibilityRest: mastodon.v1.StatusVisibility,
+	quoteApproval: QuoteApprovalPolicy | 'default',
+	quoteLinks: boolean,
 	postCounter: boolean,
 	defaultLanguage: string,
 }
@@ -71,8 +77,11 @@ const DEFAULT_SETTINGS: MastodonThreadingSettings = {
         "image/heif",
         "image/webp",
 	],
+	serverSupportsQuotes: true,
 	visibilityFirst: 'public',
 	visibilityRest: 'unlisted',
+	quoteApproval: 'default',
+	quoteLinks: true,
 	postCounter: false,
 	// @ts-ignore
 	defaultLanguage: i18next.language?.split('-')[0] || 'en',
@@ -198,169 +207,194 @@ export default class MastodonThreading extends Plugin {
 
 	async thread_post(editor: Editor) {
 		try {
-			const limit = await this.getInstanceInfo(); // Update server parameters and check availability
-			let requests = 0;
-			if (editor.getSelection() || editor.getValue()) {
-				type postMetadata = {
-					text: string,
-					warning: string | null,
-					images: {
-						file: TFile,
-						alt: string,
-						isimage: boolean,
-					}[]
-				}
-				let message: string = '';
-				if (editor.getSelection()) {
-					// If some fragments selected, get only the last one
-					let chunks = editor.getSelection().split(SEPARATOR);
-					message = chunks[chunks.length - 1];
-				}
-				else {
-					message = editor.getValue();
-				}
-				let chunks = message.split(SEPARATOR);
-				let posts: postMetadata[] = [];
-				let count = 0;
-				let descriptions = true;
-				for (let c of chunks) {
-					if (c.trim().length === 0) {
-						new Notice(t('error.void_fragment'));
-						return;
+			// Update server parameters and check credentials
+			const limit = await this.getInstanceInfo();
+			if (await this.checkCredentials()) {
+				let requests = 0;
+				if (editor.getSelection() || editor.getValue()) {
+					type postMetadata = {
+						text: string,
+						warning: string | null,
+						images: {
+							file: TFile,
+							alt: string,
+							isimage: boolean,
+						}[],
+						quote: string | null,
 					}
-					let post: postMetadata = {
-						text: c,
-						warning: null,
-						images: []
+					let message: string = '';
+					if (editor.getSelection()) {
+						// If some fragments selected, get only the last one
+						let chunks = editor.getSelection().split(SEPARATOR);
+						message = chunks[chunks.length - 1];
+					} else {
+						message = editor.getValue();
 					}
-					// Get images metadata
-					for (let m of post.text.matchAll(pattern_image)) {
-						let mimetype = mime.getType(m[2].toLowerCase()) || '-'
-						if (this.settings.serverMimeTypes.includes(mimetype)) {
-							// Only one video allowed, not mixed with images
-							if (post.images.length > 0) {
-								if (mimetype.startsWith('image')) {
-									if (post.images.some(it => !it.isimage)) {
-										// Trying to add image to videos
+					let chunks = message.split(SEPARATOR);
+					let posts: postMetadata[] = [];
+					let count = 0;
+					let descriptions = true;
+					for (let c of chunks) {
+						if (c.trim().length === 0) {
+							new Notice(t('error.void_fragment'));
+							return;
+						}
+						let post: postMetadata = {
+							text: c,
+							warning: null,
+							images: [],
+							quote: null,
+						}
+						// Get images metadata
+						for (let m of post.text.matchAll(pattern_image)) {
+							let mimetype = mime.getType(m[2].toLowerCase()) || '-'
+							if (this.settings.serverMimeTypes.includes(mimetype)) {
+								// Only one video allowed, not mixed with images
+								if (post.images.length > 0) {
+									if (mimetype.startsWith('image')) {
+										if (post.images.some(it => !it.isimage)) {
+											// Trying to add image to videos
+											new Notice(t('error.filetype_not_allowed', {file: m[1]}));
+											return;
+										}
+									} else {
+										// Trying to add video to another media
 										new Notice(t('error.filetype_not_allowed', {file: m[1]}));
 										return;
 									}
 								}
-								else {
-									// Trying to add video to another media
-									new Notice(t('error.filetype_not_allowed', {file: m[1]}));
-									return;
-								}
-							}
-							let file = this.app.vault.getFileByPath(m[1]);
-							if (file === null) {
-								// Try on the attachment folder
-								// @ts-ignore
-								file = this.app.vault.getFileByPath(`${this.app.vault.getConfig("attachmentFolderPath").replace(/^\.\//, '')}/${m[1]}`);
+								let file = this.app.vault.getFileByPath(m[1]);
 								if (file === null) {
-									new Notice(t('error.file_not_found', {file: m[1]}));
+									// Try on the attachment folder
+									// @ts-ignore
+									file = this.app.vault.getFileByPath(`${this.app.vault.getConfig("attachmentFolderPath").replace(/^\.\//, '')}/${m[1]}`);
+									if (file === null) {
+										new Notice(t('error.file_not_found', {file: m[1]}));
+										return;
+									}
+								}
+								if (file.stat.size > (mimetype.startsWith('image') ? this.settings.serverMaxImage : this.settings.serverMaxVideo)) {
+									new Notice(t('error.file_size_exceeded', {file: m[1]}));
 									return;
 								}
-							}
-							if (file.stat.size > (mimetype.startsWith('image') ? this.settings.serverMaxImage : this.settings.serverMaxVideo)) {
-								new Notice(t('error.file_size_exceeded', {file: m[1]}));
+								let desc: string = '';
+								if (m[4]) {
+									desc = m[4].replace(/\n> ?/g, '\n')
+										.replace(/^> ?/, '').trim();
+									if (desc.length > this.settings.serverMaxDescription) {
+										new Notice(t('error.alt_exceeded', {max: this.settings.serverMaxDescription}));
+										return;
+									}
+								}
+								if (!desc) {
+									descriptions = false;
+								}
+								post.images.push({
+									file: file,
+									alt: desc,
+									isimage: mimetype.startsWith('image'),
+								});
+								requests++;
+							} else {
+								new Notice(t('error.filetype_not_allowed'));
 								return;
 							}
-							let desc: string = '';
-							if (m[4]) {
-								desc = m[4].replace(/\n> ?/g, '\n')
-									.replace(/^> ?/, '').trim();
-								if (desc.length > this.settings.serverMaxDescription) {
-									new Notice(t('error.alt_exceeded', {max: this.settings.serverMaxDescription}));
-									return;
-								}
-							}
-							if (!desc) {
-								descriptions = false;
-							}
-							post.images.push({
-								file: file,
-								alt: desc,
-								isimage: mimetype.startsWith('image'),
-							});
-							requests++;
 						}
-						else {
-							new Notice(t('error.filetype_not_allowed'));
+						if (post.images.length > this.settings.serverMaxAttachments) {
+							new Notice(t('error.attachment_exceeded', {max: this.settings.serverMaxAttachments}));
 							return;
 						}
-					}
-					if (post.images.length > this.settings.serverMaxAttachments) {
-						new Notice(t('error.attachment_exceeded', {max: this.settings.serverMaxAttachments}));
-						return;
-					}
-					// Find content warning
-					let found_warning = post.text.match(pattern_warning);
-					if (found_warning) {
-						post.warning = found_warning[1];
-					}
-					// Remove images from main text
-					post.text = post.text.replace(pattern_image, ' ')
-					// Simplify links
-						.replace(pattern_url, '$1')
-					// Remove warning blocks
-						.replace(pattern_warning, '')
-					// Remove quote blocks
-						.replace(pattern_quote, '')
-					// Finally, strip spaces
-						.trim();
-					// Add counter
-					if (this.settings.postCounter && chunks.length > 1) {
-						post.text += `\n[${++count}/${chunks.length}]`;
-					}
-					if (post.text.length > this.settings.maxPost) {
-						new Notice(t('error.size_exceeded', {max: this.settings.maxPost}));
-						return;
-					}
-					posts.push(post);
-					requests++;
-				}
-				if (limit != null && requests > limit) {
-					new Notice(t('error.rate_limit'));
-					return;
-				}
-				new SendThreadModal(this.app, this, posts.length, async (language, visibility_first, visibility_rest) => {
-					if (descriptions || confirm(t('modal.no_description'))) {
-						try {
-							let first = true;
-							let id_link: string | null = null;
-							for (const [i, p] of posts.entries()) {
-								if (i % 10 === 0) {
-									new Notice(t('ok.sending', {'n': (i==0? 1: i), 'total': posts.length}));
-								}
-								let media: string[] = [];
-								for (let img of p.images) {
-									let m = await this.getClient().v2.media.create({
-										file: new Blob([await this.app.vault.readBinary(img.file)]),
-										description: img.alt
-									});
-									media.push(m.id);
-								}
-								let status: mastodon.v1.Status = await this.getClient().v1.statuses.create({
-									status: p.text,
-									spoilerText: p.warning,
-									visibility: (first ? visibility_first : visibility_rest),
-									inReplyToId: id_link,
-									mediaIds: media,
-									language: language,
-								});
-								id_link = status.id;
-								first = false;
-							}
-							new Notice(posts.length > 1 ? t('ok.thread_posted') : t('ok.message_posted'));
-						} catch (err) {
-							console.error(err);
-							new Notice(t('error.not_posted'));
+						// Find content warning
+						const found_warning = post.text.match(pattern_warning);
+						if (found_warning) {
+							post.warning = found_warning[1];
 						}
+						// Remove images and other patterns from main text
+						post.text = post.text.replace(pattern_image, ' ')
+							// Simplify links
+							.replace(pattern_md_link, '$1')
+							// Remove warning blocks
+							.replace(pattern_warning, '')
+							// Remove quote blocks
+							.replace(pattern_quote, '')
+							// Finally, strip spaces
+							.trim();
+						// Find quotes in links
+						if (this.settings.serverSupportsQuotes && this.settings.quoteLinks) {
+							const found_urls = post.text.match(pattern_url);
+							if (found_urls) {
+								// Iterate over URLs, searching for mastodon posts
+								for (let url: string of found_urls) {
+									const res = await this.getClient().v2.search.list({
+										q: url, type: 'statuses', resolve: true
+									});
+									if (res.statuses.length === 1 &&
+											(res.statuses[0].quoteApproval.currentUser === 'automatic' ||
+										 	 res.statuses[0].quoteApproval.currentUser === 'manual')) {
+										post.quote = res.statuses[0].id;
+										post.text = post.text.replace(url, '');
+										break;  // Only one quote per post
+									}
+								}
+							}
+						}
+						// Add counter
+						if (this.settings.postCounter && chunks.length > 1) {
+							post.text += `\n[${++count}/${chunks.length}]`;
+						}
+						if (post.text.length > this.settings.maxPost) {
+							new Notice(t('error.size_exceeded', {max: this.settings.maxPost}));
+							return;
+						}
+						posts.push(post);
+						requests++;
 					}
-				}).open();
+					if (limit != null && requests > limit) {
+						new Notice(t('error.rate_limit'));
+						return;
+					}
+					new SendThreadModal(this.app, this, posts.length, async (language, visibility_first, visibility_rest) => {
+						if (descriptions || confirm(t('modal.no_description'))) {
+							try {
+								let first = true;
+								let id_link: string | null = null;
+								for (const [i, p] of posts.entries()) {
+									if (i % 10 === 0) {
+										new Notice(t('ok.sending', {'n': (i == 0 ? 1 : i), 'total': posts.length}));
+									}
+									let media: string[] = [];
+									for (let img of p.images) {
+										let m = await this.getClient().v2.media.create({
+											file: new Blob([await this.app.vault.readBinary(img.file)]),
+											description: img.alt
+										});
+										media.push(m.id);
+									}
+									let status: mastodon.v1.Status = await this.getClient().v1.statuses.create({
+										status: p.text,
+										spoilerText: p.warning,
+										visibility: (first ? visibility_first : visibility_rest),
+										inReplyToId: id_link,
+										mediaIds: media,
+										language: language,
+										quotedStatusId: p.quote,
+										quoteApprovalPolicy: this.settings.quoteApproval === 'default'? null: this.settings.quoteApproval,
+									});
+									id_link = status.id;
+									first = false;
+								}
+								new Notice(posts.length > 1 ? t('ok.thread_posted') : t('ok.message_posted'));
+							} catch (err) {
+								console.error(err);
+								new Notice(t('error.not_posted'));
+							}
+						}
+					}).open();
+				} else {
+					new Notice(t('error.no_text'));
+				}
 			} else {
-				new Notice(t('error.no_text'));
+				new Notice(t('error.not_logged'));
 			}
 		} catch (err) {
 			console.error(err);
@@ -379,7 +413,7 @@ export default class MastodonThreading extends Plugin {
 			if (!text.startsWith('>')) {
 				// Ignore images and shorten links
 				text = text.replace(pattern_image, ' ')
-					.replace(pattern_url, '$1');
+					.replace(pattern_md_link, '$1');
 				count += text.length + 1;
 				if (count > this.settings.maxPost) {
 					editor.replaceRange(SEPARATOR, {line: i, ch: 0});
@@ -443,7 +477,15 @@ export default class MastodonThreading extends Plugin {
 			}
 		}
 	}
-	
+
+	async checkCredentials(): Promise<boolean> {
+		const client = this.getClient();
+		const app = await client.v1.apps.verifyCredentials();
+		return (app.scopes.includes('read:search') &&
+			app.scopes.includes('write:media') &&
+			app.scopes.includes('write:statuses'));
+	}
+
 	async getInstanceInfo() {
 		let resp = await requestUrl(`https://${this.settings.server}/api/v2/instance`);
 		if (resp.status == 200) {
@@ -454,6 +496,10 @@ export default class MastodonThreading extends Plugin {
 			this.settings.serverMaxVideo = info.configuration.media_attachments.video_size_limit;
 			this.settings.serverMaxAttachments = info.configuration.statuses.max_media_attachments;
 			this.settings.serverMimeTypes = info.configuration.media_attachments.supported_mime_types;
+			const version = info.version.split(".");
+			const major = parseInt(version[0], 10);
+			const minor = parseInt(version[1], 10);
+			this.settings.serverSupportsQuotes = major > 4 || (major === 4 && minor >= 5);
 			await this.saveSettings();
 		}
 		return parseInt(resp.headers['x-ratelimit-remaining']) || null;
@@ -523,14 +569,39 @@ class SendThreadModal extends Modal {
 class MastodonThreadingSettingTab extends PluginSettingTab {
 	plugin: MastodonThreading;
 	displayInterval?: unknown = null;
+	lastRefresh: number;
 
 	constructor(app: App, plugin: MastodonThreading) {
 		super(app, plugin);
 		this.plugin = plugin;
+		this.lastRefresh = 0;
 	}
 
 	display(): void {
 		const {containerEl} = this;
+
+		// Update server info and check credentials if necessary (and possible)
+		// (one hour latency period, to avoid hammering)
+		if (new Date().getTime() > this.lastRefresh + 3600000) {
+			this.lastRefresh = new Date().getTime();
+			try {
+				this.plugin.getInstanceInfo().then(() => {
+					this.display();
+				});
+				if (this.plugin.settings.server && this.plugin.settings.authToken) {
+					this.plugin.checkCredentials().then(ok => {
+						if (!ok) {
+							this.plugin.settings.authToken = '';
+							this.plugin.settings.clientId = '';
+							this.plugin.settings.clientSecret = '';
+							this.display();
+						}
+					});
+				}
+			} catch (err) {
+				console.error(err);
+			}
+		}
 
 		containerEl.empty();
 
@@ -660,7 +731,7 @@ class MastodonThreadingSettingTab extends PluginSettingTab {
 				.addOption('public', t('settings.visibility.public'))
 				.addOption('unlisted', t('settings.visibility.unlisted'))
 				.addOption('private', t('settings.visibility.private'))
-				.setValue(this.plugin.settings.visibilityFirst)
+				.setValue(this.plugin.settings.visibilityFirst as string)
 				.onChange(async value => {
 					this.plugin.settings.visibilityFirst = value as StatusVisibility;
 					await this.plugin.saveSettings();
@@ -680,11 +751,53 @@ class MastodonThreadingSettingTab extends PluginSettingTab {
 				.addOption('public', t('settings.visibility.public_not_recommended'))
 				.addOption('unlisted', t('settings.visibility.unlisted'))
 				.addOption('private', t('settings.visibility.private'))
-				.setValue(this.plugin.settings.visibilityRest)
+				.setValue(this.plugin.settings.visibilityRest as string)
 				.onChange(async value => {
 					this.plugin.settings.visibilityRest = value as StatusVisibility;
 					await this.plugin.saveSettings();
 					this.display();
+				})
+			);
+
+		let quote_approval_desc = t('settings.quote_approval_desc');
+		if (!this.plugin.settings.serverSupportsQuotes) {
+			quote_approval_desc = new DocumentFragment();
+			const errortext1 = quote_approval_desc.createSpan();
+			errortext1.textContent = t('settings.quotes_not_supported');
+			errortext1.addClass('warning');
+		}
+		new Setting(containerEl)
+			.setName(t('settings.quote_approval'))
+			.setDesc(quote_approval_desc)
+			.addDropdown(dropdown => dropdown
+				.addOption('default', t('settings.quote.default'))
+				.addOption('public', t('settings.quote.public'))
+				.addOption('followers', t('settings.quote.followers'))
+				.addOption('nobody', t('settings.quote.nobody'))
+				.setValue(this.plugin.settings.serverSupportsQuotes? this.plugin.settings.quoteApproval as string : 'default')
+				.setDisabled(!this.plugin.settings.serverSupportsQuotes)
+				.onChange(async value => {
+					this.plugin.settings.quoteApproval = value as QuoteApprovalPolicy | 'default';
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+		let quote_links_desc = t('settings.quote_links_desc');
+		if (!this.plugin.settings.serverSupportsQuotes) {
+			quote_links_desc = new DocumentFragment();
+			const errortext2 = quote_links_desc.createSpan();
+			errortext2.textContent = t('settings.quotes_not_supported');
+			errortext2.addClass('warning');
+		}
+		new Setting(containerEl)
+			.setName(t('settings.quote_links'))
+			.setDesc(quote_links_desc)
+			.addToggle(tg => tg
+				.setValue(this.plugin.settings.serverSupportsQuotes? this.plugin.settings.quoteLinks : false)
+				.setDisabled(!this.plugin.settings.serverSupportsQuotes)
+				.onChange(async value => {
+					this.plugin.settings.quoteLinks = value;
+					await this.plugin.saveSettings();
 				})
 			);
 		new Setting(containerEl)

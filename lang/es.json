@@ -26,7 +26,18 @@
 			"unlisted": "Pública silenciosa (no listado ni en búsquedas)",
 			"private": "Privado (solo para tus seguidores)"
 		},
-		"default_language": "Lenguaje de posts por defecto"
+		"default_language": "Lenguaje de posts por defecto",
+		"quote_approval": "Quién puede citarte",
+		"quote_approval_desc": "Decide quién podrá citar tus publicaciones",
+		"quote": {
+			"default": "Según lo configurado en tu cuenta",
+			"public": "Todos",
+			"followers": "Solo tus seguidores",
+			"nobody": "Nadie"
+		},
+		"quote_links": "Convertir los enlaces en citas",
+		"quote_links_desc": "Los enlaces a publicaciones de Mastodon se convertirán en citas siempre que sea posible.",
+		"quotes_not_supported": "El servidor no soporta citas."
 	},
 	"modal": {
 		"send_thread_count": "Enviar hilo a Mastodon con {{count}} posts",
@@ -51,7 +62,7 @@
 	},
 	"error": {
 		"session_lost": "¡Se ha perdido la sesión con Mastodon!",
-		"not_logged": "No estás conectado a Mastodon. Por favor, revisa los ajustes del complemento.",
+		"not_logged": "No estás conectado a Mastodon. Por favor, revisa los ajustes del plugin.",
 		"not_posted": "ERROR: ¡El mensaje no se ha enviado!",
 		"no_text": "¡No hay texto para enviar!",
 		"size_exceeded": "NO ENVIADO: Se superan los {{max}} caracteres.",
