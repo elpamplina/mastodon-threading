@@ -31,8 +31,7 @@ import {
 import mime from "mime/lite";
 import {decryptText, encryptText, generateKey} from "./encrypt";
 import {QuoteApprovalPolicy} from "masto/dist/esm/mastodon/rest/v1/statuses";
-
-type StatusVisibility = mastodon.v1.StatusVisibility;
+import {StatusVisibility} from "masto/dist/cjs/mastodon/entities/v1";
 
 // @ts-ignore
 const t = i18next.getFixedT(null, 'plugin-mastodon-threading', null);
@@ -212,14 +211,16 @@ export default class MastodonThreading extends Plugin {
 			if (await this.checkCredentials()) {
 				let requests = 0;
 				if (editor.getSelection() || editor.getValue()) {
+					type imageMetadata = {
+						file: TFile,
+						alt: string,
+						isimage: boolean,
+						mediaId: string | null,
+					}
 					type postMetadata = {
 						text: string,
 						warning: string | null,
-						images: {
-							file: TFile,
-							alt: string,
-							isimage: boolean,
-						}[],
+						images: imageMetadata[],
 						quote: string | null,
 					}
 					let message: string = '';
@@ -232,6 +233,7 @@ export default class MastodonThreading extends Plugin {
 					}
 					let chunks = message.split(SEPARATOR);
 					let posts: postMetadata[] = [];
+					let imageList: imageMetadata[] = [];
 					let count = 0;
 					let descriptions = true;
 					for (let c of chunks) {
@@ -289,11 +291,14 @@ export default class MastodonThreading extends Plugin {
 								if (!desc) {
 									descriptions = false;
 								}
-								post.images.push({
+								let newImage: imageMetadata = {
 									file: file,
 									alt: desc,
 									isimage: mimetype.startsWith('image'),
-								});
+									mediaId: null,
+								};
+								post.images.push(newImage);
+								imageList.push(newImage);
 								requests++;
 							} else {
 								new Notice(t('error.filetype_not_allowed'));
@@ -328,6 +333,7 @@ export default class MastodonThreading extends Plugin {
 									const res = await this.getClient().v2.search.list({
 										q: url, type: 'statuses', resolve: true
 									});
+									requests++;
 									if (res.statuses.length === 1 &&
 											(res.statuses[0].quoteApproval.currentUser === 'automatic' ||
 										 	 res.statuses[0].quoteApproval.currentUser === 'manual')) {
@@ -356,21 +362,33 @@ export default class MastodonThreading extends Plugin {
 					new SendThreadModal(this.app, this, posts.length, async (language, visibility_first, visibility_rest) => {
 						if (descriptions || confirm(t('modal.no_description'))) {
 							try {
+								new Notice(t('ok.sending', {'n': 1, 'total': posts.length}));
+
+								// Posting all media first in order to early avoid rate limits
+								for (const [i, img] of imageList.entries()) {
+									let { data: m, headers } = await this.getClient().v2.media.create.$raw({
+										file: new Blob([await this.app.vault.readBinary(img.file)]),
+										description: img.alt
+									});
+									img.mediaId = m.id;
+									if (parseInt(headers.get('x-ratelimit-remaining'), 10) < imageList.length - i) {
+										new Notice(t('error.rate_limit'));
+										return;
+									}
+								}
 								let first = true;
 								let id_link: string | null = null;
 								for (const [i, p] of posts.entries()) {
-									if (i % 10 === 0) {
+									if (i !== 0 && i % 10 === 0) {
 										new Notice(t('ok.sending', {'n': (i == 0 ? 1 : i), 'total': posts.length}));
 									}
 									let media: string[] = [];
 									for (let img of p.images) {
-										let m = await this.getClient().v2.media.create({
-											file: new Blob([await this.app.vault.readBinary(img.file)]),
-											description: img.alt
-										});
-										media.push(m.id);
+										if (img.mediaId) {
+											media.push(img.mediaId);
+										}
 									}
-									let status: mastodon.v1.Status = await this.getClient().v1.statuses.create({
+									let {data: status, headers} = await this.getClient().v1.statuses.create.$raw({
 										status: p.text,
 										spoilerText: p.warning,
 										visibility: (first ? visibility_first : visibility_rest),
@@ -382,6 +400,10 @@ export default class MastodonThreading extends Plugin {
 									});
 									id_link = status.id;
 									first = false;
+									if (parseInt(headers.get('x-ratelimit-remaining'), 10) < posts.length - i) {
+										new Notice(t('error.rate_limit'));
+										return;
+									}
 								}
 								new Notice(posts.length > 1 ? t('ok.thread_posted') : t('ok.message_posted'));
 							} catch (err) {
