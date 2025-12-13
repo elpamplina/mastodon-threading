@@ -33,7 +33,7 @@ const encrypt = async (text: string, key: CryptoKey) => {
 	}
 }
 
-const pack = (buffer: ArrayBuffer) => {
+const pack = (buffer: Uint8Array<ArrayBuffer>) => {
 	return window.btoa(
 		String.fromCharCode.apply(null, new Uint8Array(buffer))
 	)
@@ -53,16 +53,16 @@ const unpack = (packed: string) => {
 	return string_to_buffer(window.atob(packed));
 }
 
-const decode = (bytestream: Uint8Array) => {
+const decode = (bytestream: Uint8Array<ArrayBuffer>) => {
 	const decoder = new TextDecoder()
 	return decoder.decode(bytestream)
 }
 
 const decrypt = async (cipher: ArrayBuffer, key: CryptoKey, iv: ArrayBuffer) => {
-	const encoded = await window.crypto.subtle.decrypt({
+	const encoded = new Uint8Array(await window.crypto.subtle.decrypt({
 		name: 'AES-GCM',
 		iv: iv,
-	}, key, cipher)
+	}, key, cipher))
 	return decode(encoded)
 }
 
@@ -71,7 +71,7 @@ const generateKey = (seed: string) => window.crypto.subtle.digest('SHA-256', str
 const encryptText = async (key: ArrayBuffer, text: string) => {
 	const cryptoKey = await importKey(key);
 	const {cipher, iv} = await encrypt(text, cryptoKey)
-	return pack(iv) + ':' + pack(cipher);
+	return pack(iv) + ':' + pack(new Uint8Array(cipher));
 }
 
 const decryptText = async (key: ArrayBuffer, text: string) => {

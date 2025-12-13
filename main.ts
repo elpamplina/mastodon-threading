@@ -31,10 +31,22 @@ import {
 import mime from "mime/lite";
 import {decryptText, encryptText, generateKey} from "./encrypt";
 import {QuoteApprovalPolicy} from "masto/dist/esm/mastodon/rest/v1/statuses";
-import {StatusVisibility} from "masto/dist/cjs/mastodon/entities/v1";
+import {Status, StatusVisibility} from "masto/dist/cjs/mastodon/entities/v1";
+import {HttpResponse} from "masto/dist/cjs/interfaces";
+import {Client} from "undici-types";
 
 // @ts-ignore
 const t = i18next.getFixedT(null, 'plugin-mastodon-threading', null);
+
+type SearchStatus = Status & {
+	quoteApproval: {
+		currentUser: 'automatic' | 'manual' | 'denied' | 'unknown'
+	}
+}
+
+type VerifyCredentials = Client & {
+	scopes: string[]
+}
 
 interface MastodonThreadingSettings {
 	server: string,
@@ -329,14 +341,15 @@ export default class MastodonThreading extends Plugin {
 							const found_urls = post.text.match(pattern_url);
 							if (found_urls) {
 								// Iterate over URLs, searching for mastodon posts
-								for (let url: string of found_urls) {
+								for (let url of found_urls) {
 									const res = await this.getClient().v2.search.list({
 										q: url, type: 'statuses', resolve: true
 									});
 									requests++;
-									if (res.statuses.length === 1 &&
-											(res.statuses[0].quoteApproval.currentUser === 'automatic' ||
-										 	 res.statuses[0].quoteApproval.currentUser === 'manual')) {
+									const statuses: SearchStatus[] = res.statuses as SearchStatus[];
+									if (statuses.length === 1 &&
+											(statuses[0].quoteApproval.currentUser === 'automatic' ||
+										 	 statuses[0].quoteApproval.currentUser === 'manual')) {
 										post.quote = res.statuses[0].id;
 										post.text = post.text.replace(url, '');
 										break;  // Only one quote per post
@@ -371,7 +384,9 @@ export default class MastodonThreading extends Plugin {
 										description: img.alt
 									});
 									img.mediaId = m.id;
-									if (parseInt(headers.get('x-ratelimit-remaining'), 10) < imageList.length - i) {
+									const ratelimit = headers.get('x-ratelimit-remaining');
+									if (ratelimit != null &&
+											parseInt(ratelimit, 10) < imageList.length - i) {
 										new Notice(t('error.rate_limit'));
 										return;
 									}
@@ -388,7 +403,7 @@ export default class MastodonThreading extends Plugin {
 											media.push(img.mediaId);
 										}
 									}
-									let {data: status, headers} = await this.getClient().v1.statuses.create.$raw({
+									const resp: HttpResponse<Status> = await this.getClient().v1.statuses.create.$raw({
 										status: p.text,
 										spoilerText: p.warning,
 										visibility: (first ? visibility_first : visibility_rest),
@@ -398,9 +413,10 @@ export default class MastodonThreading extends Plugin {
 										quotedStatusId: p.quote,
 										quoteApprovalPolicy: this.settings.quoteApproval === 'default'? null: this.settings.quoteApproval,
 									});
-									id_link = status.id;
+									id_link = resp.data.id;
 									first = false;
-									if (parseInt(headers.get('x-ratelimit-remaining'), 10) < posts.length - i) {
+									const ratelimit = resp.headers.get('x-ratelimit-remaining');
+									if (ratelimit != null && parseInt(ratelimit, 10) < posts.length - i) {
 										new Notice(t('error.rate_limit'));
 										return;
 									}
@@ -502,7 +518,7 @@ export default class MastodonThreading extends Plugin {
 
 	async checkCredentials(): Promise<boolean> {
 		const client = this.getClient();
-		const app = await client.v1.apps.verifyCredentials();
+		const app: VerifyCredentials = await client.v1.apps.verifyCredentials() as unknown as VerifyCredentials;
 		return (app.scopes.includes('read:search') &&
 			app.scopes.includes('write:media') &&
 			app.scopes.includes('write:statuses'));

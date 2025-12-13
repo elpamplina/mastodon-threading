@@ -9,6 +9,8 @@
 		"connect_to": "Mit Mastodon verbinden",
 		"connect": "Verbinden",
 		"error": "Fehler beim Verbinden mit dem Server!",
+		"connecting": "Connecting to {{server}}...",
+		"cancel": "Cancel",
 		"max_post": "Zeichenbegrenzung",
 		"max_post_desc": "{{server}} erlaubt Beiträge mit {{max}} Zeichen.",
 		"visibility_first": "Sichtbarkeit des ersten Beitrags",
@@ -24,7 +26,18 @@
 			"unlisted": "Öffentlich (still) (ungelistet und nicht im Such-Algorithmus)",
 			"private": "Follower (nur Personen, die dir folgen)"
 		},
-		"default_language": "Standardpostsprache"
+		"default_language": "Standardpostsprache",
+		"quote_approval": "Who can quote",
+		"quote_approval_desc": "Decide who can quote your posts",
+		"quote": {
+			"default": "As set on your account",
+			"public": "Everybody",
+			"followers": "Your followers only",
+			"nobody": "Nobody"
+		},
+		"quote_links": "Convert links into quotes",
+		"quote_links_desc": "Links to Mastodon posts will be converted into citations whenever possible.",
+		"quotes_not_supported": "The server doesn't support quotes."
 	},
 	"modal": {
 		"send_thread_count": "Versende einen Thread an Mastodon mit {{count}} Beiträgen",
