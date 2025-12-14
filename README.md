@@ -161,7 +161,7 @@ This plugin is free software, released under the [General Public License version
 
 This plugin is made and maintained as a side project for amusement only.
 
-- Many thanks to Ulises Lafuente (@Rataunderground@paquita.masto.host) for adapting the Mastodon icon.
+- Many thanks to Ulises Lafuente (@Rataunderground@neopaquita.es) for adapting the Mastodon icon.
 - Thanks to [platypusgit](https://github.com/platypusgit) for the German translation.
 - Thanks to Eugen Rochko and all the Mastodon team for creating the best open and free social network ruled by the people.
 - Thanks to Ryō Igarashi for maintaining the masto.js library.
