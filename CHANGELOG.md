@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0](https://github.com/elpamplina/mastodon-threading/compare/1.1.2...1.2.0)
+
+### New features
+
+* Mastodon quote support:
+** Option to convert links into quotes if possible.
+** Option to set own posts quote policy. 
+* Unified "send single post" and "send thread" in an unique command "send to Mastodon".
+* Better control of rate limits using the x-ratelimit-remaining HTTP header.
+* Using granular scopes to limit the permissions granted to the app. Credentials are checked everytime before posting.
+* Send selected fragment now supports media attachments and content warnings.
+
+### Technical
+
+* Upgraded to TypeScript 5 and other libraries and dependencies.
+
 ## [1.1.2](https://github.com/elpamplina/mastodon-threading/compare/1.1.1...1.1.2)
 
 ### New features
