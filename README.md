@@ -62,7 +62,10 @@ If you don't know which server your personal account is, just look at the second
 
 Type your server name in the box provided and press "Connect"
 
-A browser window will open on your server, asking for your user credentials, and then for you to grant write permission to the plugin.
+A browser window will open on your server, asking for your user credentials, and then for you to grant the following permissions to the plugin:
+- `read:search`: Search posts in the server to know if they can be quoted by you.
+- `write:media`: Send multimedia attachments to the server.
+- `write:statuses`: Post messages on your behalf.
 
 Once permission is granted, the browser may ask you if you want to return to Obsidian, or you will be redirected automatically. It is necessary to return to Obsidian to store the authorization, and then it will be indicated that you are connected. The connection and authorization process is only necessary the first time you use the plugin. From then on, the plugin stores its credentials (not yours) securely until you press "Disconnect."
 
@@ -76,7 +79,11 @@ If the process fails, you can start it from the beginning as many times as neces
 - **Default post language**: Language code that will be sent to the Mastodon server. By default, the same of the Obsidian interface is chosen.
 - **First post visibility**: Sets the default visibility of the first post in the thread. This will be "public" by default.
 - **Next posts visibility**: Sets the default visibility of the second and subsequent posts in the thread. This will be "quiet public" by default.
+- **Who can quote**: Establish your policy so that others can quote your posts. By default, your Mastodon account preferences are followed.
+- **Convert links into quotes**: If activated, the plugin will try to quote those links that correspond to Mastodon posts. If it is not possible to make the quote, due to the restrictions of the author of the post or for another reason, it will remain as a link. It is only possible to make one quote per post. If there are several possible quotes in the same post, only the first of them will be made and the rest will remain as links.
 - **Post counter**: Sets whether to insert the fragment number at the end of each post (e.g. `[1/10]`). By default, this is disabled.
+
+> For more information about quotes in Mastodon, refer to the [official documentation](https://docs.joinmastodon.org/user/quote-posts/).
 
 ### Visibility
 
@@ -93,15 +100,14 @@ In Mastodon there is another visibility (direct), which is not supported by this
 
 The plugin adds the following commands to the Obsidian's palette:
 
-- **Send single post to Mastodon**: Sends the selected text to your Mastodon server as a single post. This option only sends text, not images, and is intended to check that your connection to the server is working properly.
 - **Insert thread separator**: Separators allow you to create fragments in the text, which will form the posts of the thread. The separator is inserted at the current cursor position.
 - **Insert thread separators automatically**: Inserts separators in the active editor at sufficient intervals to not exceed the maximum size set. Separators are only placed between paragraphs, they do not break paragraphs in half. If you want to separate a paragraph, you can do it manually. This process is not perfect if there are very long paragraphs, or if the text has an unusual structure, so you will have to review the result and manually modify what did not turn out well.
 - **Remove all thread separators**: In the active editor, all thread separators are removed. You can always remove them manually using the standard editor tools.
-- **Send thread to Mastodon**: All fragments from the active editor are sent as a thread, checking first that the size and format are correct. Images are attached with descriptions (if available).
+- **Send to Mastodon**: All fragments from the active editor are sent as a thread (or single post if there're no separators), checking first that the size and format are correct. Images are attached with descriptions (if available). If there's an active selection in the editor, only the selected text/attachments are sent.
 
-The "Send single post to Mastodon" and "Insert thread separator" commands also appear in the context menu of the Obsidian editor.
+The "Send to Mastodon" and "Insert thread separator" commands also appear in the context menu of the Obsidian editor.
 
-The "Send thread to Mastodon" command also appears in the icons ribbon (if available).
+The "Send to Mastodon" command also appears in the icons ribbon (if available).
 
 ### Separators
 
@@ -123,9 +129,9 @@ The plugin manages the images, videos and other media that are supported by the 
 
 The plugin takes into account all this and, in the event that some attachment does not meet the limitations of the server, an error message is shown BEFORE starting to send the thread.
 
-### Quotes and media descriptions
+### Quote blocks and media descriptions
 
-The plugin uses quote blocks (starting with the Markdown symbol ">") to add descriptions to images and other media. Just add a quote after a media, and it will be sent as description.
+The plugin uses quote blocks (starting with the Markdown symbol ">") to add descriptions to images and other media. Just add a quote block after a media, and it will be sent as description.
 
 ![Screen capture with an image with description](img/images.png)
 
