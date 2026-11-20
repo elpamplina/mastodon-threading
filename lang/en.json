@@ -45,8 +45,11 @@
 		"visibility_first": "First post visibility",
 		"visibility_rest": "Visibility of other posts",
 		"submit": "Send",
-		"no_description": "WARNING: There're images without description. Send anyway?",
-		"post_language": "Posts language"
+		"no_description": "WARNING: There're images without description",
+		"post_language": "Posts language",
+		"single_footer": "Add to the bottom of the post",
+		"multiple_footer": "Add to the bottom of each post",
+		"footer_placeholder": "e.g. #hashtag"
 	},
 	"command": {
 		"single_post": "Send single post to Mastodon",
@@ -65,7 +68,7 @@
 		"not_logged": "You're not connected to Mastodon. Please, check the plugin settings.",
 		"not_posted": "ERROR: The message wasn't posted!",
 		"no_text": "No text to send!",
-		"size_exceeded": "NOT SENT: More than {{max}} characters in one post.",
+		"size_exceeded": "ERROR: Exceeded the {{max}} character limit.",
 		"file_size_exceeded": "NOT SENT: Attachment size exceeded: {{file}}",
 		"alt_exceeded": "NOT SENT: More than {{max}} characters in description.",
 		"attachment_exceeded": "NOT SENT: More than {{max}} images in one post.",

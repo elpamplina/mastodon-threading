@@ -17,6 +17,9 @@ This plugin can:
 - Visualize the order of fragments and their size as they are typed.
 - Add descriptions to images and other media to facilitate accessibility for people with visual impairments.
 - Submit individual posts or entire threads directly to the Mastodon server, checking the size limitations and different types of visibility supported by the server.
+- Convert links to other posts into quotes.
+- Add automatic post counters and footers.
+- Send posts under "content warning".
 
 ## Installation
 
@@ -156,6 +159,10 @@ Please send your language definitions via Pull Request on Github, or contact me 
 ## License
 
 This plugin is free software, released under the [General Public License version 2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+
+## No AI statement
+
+No generative AI was used in any part of this work. Any errors that may be found are entirely attributable to a mere human.
 
 ## Acknowledgements
 

@@ -45,8 +45,11 @@
 		"visibility_first": "Sichtbarkeit des ersten Beitrags",
 		"visibility_rest": "Sichtbarkeit der folgenden Beiträge im Thread",
 		"submit": "Versenden",
-		"no_description": "WARNUNG: Es sind Dateien ohne Beschreibung vorhanden. Trotzdem versenden?",
-		"post_language": "Sprache der Beiträge"
+		"no_description": "WARNUNG: Es sind Dateien ohne Beschreibung vorhanden",
+		"post_language": "Sprache der Beiträge",
+		"single_footer": "Am Ende des Beitrags hinzufügen",
+		"multiple_footer": "Am Ende jedes Beitrags hinzufügen",
+		"footer_placeholder": "z.B. #hashtag"
 	},
 	"command": {
 		"single_post": "Versende einen einzelnen Beitrag an Mastodon",
@@ -65,7 +68,7 @@
 		"not_logged": "Du bist nicht mit Mastodon verbunden. Bitte überprüfe die Plugin-Einstellungen.",
 		"not_posted": "FEHLER: Dieser Beitrag wurde nicht versendet!",
 		"no_text": "Kein Text zum Versenden!",
-		"size_exceeded": "NICHT VERSENDET: Mehr als {{max}} Zeichen in einem Beitrag.",
+		"size_exceeded": "FEHLER: Mehr als {{max}} Zeichen in einem Beitrag.",
 		"file_size_exceeded": "NICHT VERSENDET: Größe der Anhänge wurde überschritten: {{file}}",
 		"alt_exceeded": "NICHT VERSENDET: Mehr als {{max}} Zeichen in der Beschreibung.",
 		"attachment_exceeded": "NICHT VERSENDET: Mehr als {{max}} angehängte Dateien in einem Beitrag.",

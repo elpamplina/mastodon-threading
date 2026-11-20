@@ -45,8 +45,11 @@
 		"visibility_first": "Visibilidad del primer post",
 		"visibility_rest": "Visibilidad del resto",
 		"submit": "Enviar",
-		"no_description": "AVISO: Hay imágenes sin descripción. ¿Enviar de todos modos?",
-		"post_language": "Lenguaje de los posts"
+		"no_description": "AVISO: Hay imágenes sin descripción",
+		"post_language": "Lenguaje de los posts",
+		"single_footer": "Añadir al pie del post",
+		"multiple_footer": "Añadir al pie de cada post",
+		"footer_placeholder": "p.ej. #etiqueta"
 	},
 	"command": {
 		"single_post": "Enviar un post a Mastodon",
@@ -65,7 +68,7 @@
 		"not_logged": "No estás conectado a Mastodon. Por favor, revisa los ajustes del plugin.",
 		"not_posted": "ERROR: ¡El mensaje no se ha enviado!",
 		"no_text": "¡No hay texto para enviar!",
-		"size_exceeded": "NO ENVIADO: Se superan los {{max}} caracteres.",
+		"size_exceeded": "ERROR: Se superan los {{max}} caracteres.",
 		"file_size_exceeded": "NO ENVIADO: Se supera el tamaño de archivo adjunto: {{file}}",
 		"alt_exceeded": "NO ENVIADO: Se superan los {{max}} caracteres en la descripción.",
 		"attachment_exceeded": "NO ENVIADO: Se superan las {{max}} imágenes en un post.",

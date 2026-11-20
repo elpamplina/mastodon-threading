@@ -23,3 +23,7 @@
 span.warning {
 	color: red;
 }
+
+span.hidden {
+	visibility: hidden;
+}

@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.1](https://github.com/elpamplina/mastodon-threading/compare/1.2.0...1.2.1)
+
+### New features
+
+* The post counter can be turned on or off each time, as well as in the settings.
+* You can automatically add a footer to posts, for example to include hashtags.
+
+### Technical
+
+* Upgraded Obsidian libraries and dependencies to their latest releases.
+* Fixed a bug that caused the cursor to disappear under certain circumstances.
+* Code and stability improvements.
+
 ## [1.2.0](https://github.com/elpamplina/mastodon-threading/compare/1.1.2...1.2.0)
 
 ### New features

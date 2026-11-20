@@ -1,6 +1,6 @@
 import {
 	addIcon,
-	App,
+	App, ButtonComponent,
 	Editor,
 	MarkdownView,
 	Modal,
@@ -30,13 +30,27 @@ import {
 } from "./utils";
 import mime from "mime/lite";
 import {decryptText, encryptText, generateKey} from "./encrypt";
-import {QuoteApprovalPolicy} from "masto/dist/esm/mastodon/rest/v1/statuses";
-import {Status, StatusVisibility} from "masto/dist/cjs/mastodon/entities/v1";
-import {HttpResponse} from "masto/dist/cjs/interfaces";
+import {QuoteApprovalPolicy} from "masto/dist/mastodon/rest/v1/statuses";
+import {Status, StatusVisibility} from "masto/dist/mastodon/entities/v1";
+import {HttpResponse} from "masto/dist/interfaces";
 import {Client} from "undici-types";
 
 // @ts-ignore
 const t = i18next.getFixedT(null, 'plugin-mastodon-threading', null);
+
+type imageMetadata = {
+	file: TFile,
+	alt: string,
+	isimage: boolean,
+	mediaId: string | null,
+}
+type postMetadata = {
+	text: string,
+	fullText: string | null,
+	warning: string | null,
+	images: imageMetadata[],
+	quote: string | null,
+}
 
 type SearchStatus = Status & {
 	quoteApproval: {
@@ -96,6 +110,19 @@ const DEFAULT_SETTINGS: MastodonThreadingSettings = {
 	postCounter: false,
 	// @ts-ignore
 	defaultLanguage: i18next.language?.split('-')[0] || 'en',
+}
+
+function completePosts(posts: postMetadata[], postCounter: boolean, footer: string) {
+	// Complete fullText with footers and counters
+	let count = 0;
+	for (let p of posts) {
+		p.fullText = `${p.text}${footer? '\n' + footer: ''}${postCounter && posts.length > 1? '\n[' + (++count) + '/' + posts.length + ']' : ''}`;
+	}
+}
+
+function checkSize(posts: postMetadata[], maxSize: number): boolean {
+	// true if all posts contains text and do not exceed maximum size
+	return !posts.some((p) => p.fullText === null || p.fullText.length > maxSize);
 }
 
 export default class MastodonThreading extends Plugin {
@@ -223,18 +250,6 @@ export default class MastodonThreading extends Plugin {
 			if (await this.checkCredentials()) {
 				let requests = 0;
 				if (editor.getSelection() || editor.getValue()) {
-					type imageMetadata = {
-						file: TFile,
-						alt: string,
-						isimage: boolean,
-						mediaId: string | null,
-					}
-					type postMetadata = {
-						text: string,
-						warning: string | null,
-						images: imageMetadata[],
-						quote: string | null,
-					}
 					let message: string = '';
 					if (editor.getSelection()) {
 						// If some fragments selected, get only the last one
@@ -255,6 +270,7 @@ export default class MastodonThreading extends Plugin {
 						}
 						let post: postMetadata = {
 							text: c,
+							fullText: null,
 							warning: null,
 							images: [],
 							quote: null,
@@ -293,7 +309,7 @@ export default class MastodonThreading extends Plugin {
 								}
 								let desc: string = '';
 								if (m[4]) {
-									desc = m[4].replace(/\n> ?/g, '\n')
+									desc = m[4].replace(/\n *> ?/g, '\n')
 										.replace(/^> ?/, '').trim();
 									if (desc.length > this.settings.serverMaxDescription) {
 										new Notice(t('error.alt_exceeded', {max: this.settings.serverMaxDescription}));
@@ -357,10 +373,6 @@ export default class MastodonThreading extends Plugin {
 								}
 							}
 						}
-						// Add counter
-						if (this.settings.postCounter && chunks.length > 1) {
-							post.text += `\n[${++count}/${chunks.length}]`;
-						}
 						if (post.text.length > this.settings.maxPost) {
 							new Notice(t('error.size_exceeded', {max: this.settings.maxPost}));
 							return;
@@ -372,60 +384,58 @@ export default class MastodonThreading extends Plugin {
 						new Notice(t('error.rate_limit'));
 						return;
 					}
-					new SendThreadModal(this.app, this, posts.length, async (language, visibility_first, visibility_rest) => {
-						if (descriptions || confirm(t('modal.no_description'))) {
-							try {
-								new Notice(t('ok.sending', {'n': 1, 'total': posts.length}));
+					new SendThreadModal(this.app, this, posts, descriptions, async (language, visibility_first, visibility_rest) => {
+						try {
+							new Notice(t('ok.sending', {'n': 1, 'total': posts.length}));
 
-								// Posting all media first in order to early avoid rate limits
-								for (const [i, img] of imageList.entries()) {
-									let { data: m, headers } = await this.getClient().v2.media.create.$raw({
-										file: new Blob([await this.app.vault.readBinary(img.file)]),
-										description: img.alt
-									});
-									img.mediaId = m.id;
-									const ratelimit = headers.get('x-ratelimit-remaining');
-									if (ratelimit != null &&
-											parseInt(ratelimit, 10) < imageList.length - i) {
-										new Notice(t('error.rate_limit'));
-										return;
-									}
+							// Posting all media first in order to early avoid rate limits
+							for (const [i, img] of imageList.entries()) {
+								let { data: m, headers } = await this.getClient().v2.media.create.$raw({
+									file: new Blob([await this.app.vault.readBinary(img.file)]),
+									description: img.alt
+								});
+								img.mediaId = m.id;
+								const ratelimit = headers.get('x-ratelimit-remaining');
+								if (ratelimit != null &&
+										parseInt(ratelimit, 10) < imageList.length - i) {
+									new Notice(t('error.rate_limit'));
+									return;
 								}
-								let first = true;
-								let id_link: string | null = null;
-								for (const [i, p] of posts.entries()) {
-									if (i !== 0 && i % 10 === 0) {
-										new Notice(t('ok.sending', {'n': (i == 0 ? 1 : i), 'total': posts.length}));
-									}
-									let media: string[] = [];
-									for (let img of p.images) {
-										if (img.mediaId) {
-											media.push(img.mediaId);
-										}
-									}
-									const resp: HttpResponse<Status> = await this.getClient().v1.statuses.create.$raw({
-										status: p.text,
-										spoilerText: p.warning,
-										visibility: (first ? visibility_first : visibility_rest),
-										inReplyToId: id_link,
-										mediaIds: media,
-										language: language,
-										quotedStatusId: p.quote,
-										quoteApprovalPolicy: this.settings.quoteApproval === 'default'? null: this.settings.quoteApproval,
-									});
-									id_link = resp.data.id;
-									first = false;
-									const ratelimit = resp.headers.get('x-ratelimit-remaining');
-									if (ratelimit != null && parseInt(ratelimit, 10) < posts.length - i) {
-										new Notice(t('error.rate_limit'));
-										return;
-									}
-								}
-								new Notice(posts.length > 1 ? t('ok.thread_posted') : t('ok.message_posted'));
-							} catch (err) {
-								console.error(err);
-								new Notice(t('error.not_posted'));
 							}
+							let first = true;
+							let id_link: string | null = null;
+							for (const [i, p] of posts.entries()) {
+								if (i !== 0 && i % 10 === 0) {
+									new Notice(t('ok.sending', {'n': (i == 0 ? 1 : i), 'total': posts.length}));
+								}
+								let media: string[] = [];
+								for (let img of p.images) {
+									if (img.mediaId) {
+										media.push(img.mediaId);
+									}
+								}
+								const resp: HttpResponse<Status> = await this.getClient().v1.statuses.create.$raw({
+									status: p.fullText,
+									spoilerText: p.warning,
+									visibility: (first ? visibility_first : visibility_rest),
+									inReplyToId: id_link,
+									mediaIds: media,
+									language: language,
+									quotedStatusId: p.quote,
+									quoteApprovalPolicy: this.settings.quoteApproval === 'default'? null: this.settings.quoteApproval,
+								});
+								id_link = resp.data.id;
+								first = false;
+								const ratelimit = resp.headers.get('x-ratelimit-remaining');
+								if (ratelimit != null && parseInt(ratelimit, 10) < posts.length - i) {
+									new Notice(t('error.rate_limit'));
+									return;
+								}
+							}
+							new Notice(posts.length > 1 ? t('ok.thread_posted') : t('ok.message_posted'));
+						} catch (err) {
+							console.error(err);
+							new Notice(t('error.not_posted'));
 						}
 					}).open();
 				} else {
@@ -545,12 +555,13 @@ export default class MastodonThreading extends Plugin {
 }
 
 class SendThreadModal extends Modal {
-  constructor(app: App, plugin: MastodonThreading, count: number, onSubmit: (language: string, visibility_first: StatusVisibility, visibility_rest: StatusVisibility) => void) {
+  constructor(app: App, plugin: MastodonThreading, posts: postMetadata[], hasDescriptions: boolean, onSubmit: (language: string, visibility_first: StatusVisibility, visibility_rest: StatusVisibility) => void) {
     super(app);
-	if (count === 1) {
+
+	if (posts.length === 1) {
 		this.setTitle(t('command.single_post'));
 	} else {
-		this.setTitle(t('modal.send_thread_count', {count: count}));
+		this.setTitle(t('modal.send_thread_count', {count: posts.length}));
 	}
 
 	let language = plugin.settings.defaultLanguage;
@@ -568,7 +579,7 @@ class SendThreadModal extends Modal {
 		);
 	let visibility_first = plugin.settings.visibilityFirst;
 	new Setting(this.contentEl)
-		.setName(count > 1 ? t('modal.visibility_first') : t('modal.visibility_single'))
+		.setName(posts.length > 1 ? t('modal.visibility_first') : t('modal.visibility_single'))
 		.addDropdown(dropdown => dropdown
 			.addOption('public', t('settings.visibility.public'))
 			.addOption('unlisted', t('settings.visibility.unlisted'))
@@ -578,8 +589,14 @@ class SendThreadModal extends Modal {
 				visibility_first = value as StatusVisibility;
 			})
 		);
+
+	let footer: string = '';
 	let visibility_rest = plugin.settings.visibilityRest;
-	if (count > 1) {
+	let post_counter = plugin.settings.postCounter;
+	let error_span: HTMLSpanElement;
+	let button: ButtonComponent;
+
+	if (posts.length > 1) {
 		new Setting(this.contentEl)
 			.setName(t('modal.visibility_rest'))
 			.addDropdown(dropdown => dropdown
@@ -591,16 +608,75 @@ class SendThreadModal extends Modal {
 					visibility_rest = value as StatusVisibility;
 				})
 			);
+		new Setting(this.contentEl)
+			.setName(t('settings.post_counter'))
+			.setDesc(t('settings.post_counter_desc'))
+			.addToggle(tg => tg
+				.setValue(post_counter)
+				.onChange(async value => {
+					post_counter = value;
+					completePosts(posts, post_counter, footer);
+					if (checkSize(posts, plugin.settings.maxPost)) {
+						error_span.addClass('hidden');
+						button.setDisabled(false);
+					}
+					else {
+						error_span.removeClass('hidden');
+						button.setDisabled(true);
+					}
+				})
+			);
 	}
+	else {
+		post_counter = false;
+	}
+
+	new Setting(this.contentEl)
+		.setName(posts.length > 1? t('modal.multiple_footer') : t('modal.single_footer'))
+		.addText(text => text
+			.setPlaceholder(t('modal.footer_placeholder'))
+			.setValue(footer)
+			.onChange(async (value) => {
+				footer = value.trim();
+				completePosts(posts, post_counter, footer);
+				if (checkSize(posts, plugin.settings.maxPost)) {
+					error_span.addClass('hidden');
+					button.setDisabled(false);
+				}
+				else {
+					error_span.removeClass('hidden');
+					button.setDisabled(true);
+				}
+			}));
+
+	// This must be called once, at least, to define warning span and button status.
+	completePosts(posts, post_counter, footer);
+
+	error_span = this.contentEl.createEl('span', {
+		text: t('error.size_exceeded', {max: plugin.settings.maxPost}),
+		cls: 'warning'
+	});
+	error_span.toggleClass('hidden', checkSize(posts, plugin.settings.maxPost));
+
+	if (!hasDescriptions) {
+		this.contentEl.createEl('br');
+		this.contentEl.createEl('span', {
+			text: t('modal.no_description'),
+			cls: 'warning'
+		});
+	}
+
     new Setting(this.contentEl)
-      .addButton((btn) =>
-        btn
-          .setButtonText(t('modal.submit'))
-          .setCta()
-          .onClick(() => {
-            this.close();
-            onSubmit(language, visibility_first, visibility_rest);
-          }));
+      .addButton((btn) => {
+		  button = btn;
+		  btn.setButtonText(t('modal.submit'))
+			  .setCta()
+			  .setDisabled(!checkSize(posts, plugin.settings.maxPost))
+			  .onClick(() => {
+				  this.close();
+				  onSubmit(language, visibility_first, visibility_rest);
+			  })
+	  });
   }
 }
 
@@ -615,6 +691,8 @@ class MastodonThreadingSettingTab extends PluginSettingTab {
 		this.lastRefresh = 0;
 	}
 
+	// TODO: Migrate to declarative settings
+	// https://docs.obsidian.md/plugins/guides/migrate-declarative-settings
 	display(): void {
 		const {containerEl} = this;
 
